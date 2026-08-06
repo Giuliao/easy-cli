@@ -255,7 +255,7 @@ func TestRunWithoutArgumentsPrintsHelp(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("Run() code = %d, want 0; stderr = %q", code, stderr.String())
 	}
-	want := "Usage: easy <command>\n\nCommands:\n  skill list\n  skill show <name>\n  skill prompt <name>\n  skill install <name>\n\nSkills:\n  demo\n"
+	want := "Usage: easy <command>\n\nCommands:\n  skill list\n  skill show <name>\n  skill prompt <name>\n  skill install <name>\n  mysql ddl\n\nSkills:\n  demo\n"
 	if stdout.String() != want {
 		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}

@@ -28,6 +28,7 @@ func run(args []string, out, errOut io.Writer, workingDir, homeDir string) int {
 	return cli.Run(args, registry, cli.Options{
 		WorkingDir: workingDir,
 		HomeDir:    homeDir,
+		In:         os.Stdin,
 		Out:        out,
 		ErrOut:     errOut,
 	})

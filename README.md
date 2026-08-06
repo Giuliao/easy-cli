@@ -44,6 +44,31 @@ go build -o easy ./cmd/easy
 ./easy skill install smb-work-order --force
 ```
 
+## 导出 MySQL DDL
+
+只导出目标数据库中的普通表定义，DDL 按表名排序后输出到 stdout：
+
+```bash
+./easy mysql ddl \
+  --host 127.0.0.1 \
+  --port 3306 \
+  --user root \
+  --password 'your-password' \
+  --database app
+```
+
+也可以从 stdin 读取密码，避免密码进入 shell 历史：
+
+```bash
+printf '%s\n' 'your-password' | ./easy mysql ddl \
+  --host 127.0.0.1 \
+  --user root \
+  --password-stdin \
+  --database app
+```
+
+第一版不导出视图、触发器、存储过程、函数或数据。
+
 ## 开发
 
 ```bash

@@ -1,20 +1,24 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 
+	"github.com/bytedance/easy-cli/internal/mysql"
 	"github.com/bytedance/easy-cli/internal/prompt"
 	"github.com/bytedance/easy-cli/internal/skill"
 )
 
 type Options struct {
-	WorkingDir string
-	HomeDir    string
-	Out        io.Writer
-	ErrOut     io.Writer
+	WorkingDir  string
+	HomeDir     string
+	In          io.Reader
+	Out         io.Writer
+	ErrOut      io.Writer
+	MySQLExport func(context.Context, mysql.ConnectionOptions) (string, error)
 }
 
 func Run(args []string, registry *skill.Registry, options Options) int {
@@ -25,6 +29,9 @@ func Run(args []string, registry *skill.Registry, options Options) int {
 	errOut := options.ErrOut
 	if errOut == nil {
 		errOut = io.Discard
+	}
+	if len(args) >= 2 && args[0] == "mysql" && args[1] == "ddl" {
+		return runMySQLDDL(args[2:], options, out, errOut)
 	}
 	if len(args) == 0 || args[0] == "help" || args[0] == "--help" || args[0] == "-h" {
 		printHelp(out, registry)
@@ -60,6 +67,7 @@ func printHelp(out io.Writer, registry *skill.Registry) {
 	fmt.Fprintln(out, "  skill show <name>")
 	fmt.Fprintln(out, "  skill prompt <name>")
 	fmt.Fprintln(out, "  skill install <name>")
+	fmt.Fprintln(out, "  mysql ddl")
 	fprintln(out)
 	fmt.Fprintln(out, "Skills:")
 	for _, selected := range registry.List() {

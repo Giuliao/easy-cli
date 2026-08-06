@@ -11,6 +11,7 @@
 ### `internal/cli`
 
 - [easy CLI Skill 管理工具设计](./2026-08-06-easy-cli-skill-design.md)
+- [MySQL DDL 导出 CLI 设计](./2026-08-06-mysql-ddl-export-design.md)
 
 ### `internal/prompt`
 
@@ -24,6 +25,10 @@
 
 - [easy CLI Skill 管理工具设计](./2026-08-06-easy-cli-skill-design.md)
 
+### `internal/mysql`
+
+- [MySQL DDL 导出 CLI 设计](./2026-08-06-mysql-ddl-export-design.md)
+
 ## Spec -> Modules
 
 ### [easy CLI Skill 管理工具设计](./2026-08-06-easy-cli-skill-design.md)
@@ -33,3 +38,9 @@
 - `internal/prompt`
 - `internal/skill`
 - `skills/smb-work-order`
+
+### [MySQL DDL 导出 CLI 设计](./2026-08-06-mysql-ddl-export-design.md)
+
+- `cmd/easy`
+- `internal/cli`
+- `internal/mysql`

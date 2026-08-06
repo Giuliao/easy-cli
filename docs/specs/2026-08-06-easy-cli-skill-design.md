@@ -21,6 +21,7 @@ easy 是一个基于 Go 的 CLI 工具，用于把日常开发中维护在飞书
 - 第一版不提供 skill 在线市场、版本解析或依赖管理。
 - 第一版不修改用户的 Codex 配置文件。
 - 第一版不尝试推断用户没有写出的业务规则。
+- 第一版不提供 spec 生成、spec 索引或项目文档管理命令；spec 工作流属于项目开发约定。
 
 ## 3. 关键用户流程
 
@@ -58,12 +59,23 @@ easy skill install smb-work-order --force
 
 安装输出包含 skill 名称、安装目标和结果。目标文件内容相同视为幂等成功；内容不同则默认拒绝覆盖，只有显式传入 `--force` 才覆盖。
 
-## 4. Skill 数据模型与仓库布局
+## 4. 关联模块
+
+- `cmd/easy`
+- `internal/cli`
+- `internal/skill`
+- `internal/prompt`
+- `skills/smb-work-order`
+
+模块与 spec 的双向索引维护在 `docs/specs/index.md`，不由 easy CLI 运行时生成。
+
+## 5. Skill 数据模型与仓库布局
 
 仓库布局：
 
 ```text
 easy-cli/
+├── AGENTS.md
 ├── cmd/easy/main.go
 ├── internal/
 │   ├── cli/
@@ -72,7 +84,9 @@ easy-cli/
 ├── skills/
 │   └── smb-work-order/
 │       └── SKILL.md
-├── docs/superpowers/specs/
+├── docs/specs/
+│   ├── 2026-08-06-easy-cli-skill-design.md
+│   └── index.md
 ├── go.mod
 └── README.md
 ```
@@ -100,7 +114,7 @@ description: SMB 小工单项目的本地开发约束与交付规范。
 - `prompt`：只负责 Markdown 的确定性结构压缩。
 - `cli`：负责参数解析、命令路由、退出码和 stdout/stderr 输出。
 
-## 5. 命令设计
+## 6. 命令设计
 
 管理命令：
 
@@ -125,7 +139,7 @@ easy <skill-name>
 
 动态命令来自嵌入的 skill 注册表，不需要为新增 skill 修改 Go 命令分发代码。
 
-## 6. Prompt 压缩算法
+## 7. Prompt 压缩算法
 
 压缩器的原则是“保留语义、压缩结构”，不进行模型式摘要。
 
@@ -143,7 +157,7 @@ easy <skill-name>
 
 压缩算法需要对 fenced code block 做状态跟踪，表格转换不能误处理代码块中的管道符或普通文本中的管道符。
 
-## 7. 安装与文件安全
+## 8. 安装与文件安全
 
 安装器生成目标目录下的 `SKILL.md`，正文使用默认压缩结果，front matter 使用原始元数据。写入采用同目录临时文件加原子 rename，避免进程中断时留下半截文件。
 
@@ -155,7 +169,7 @@ easy <skill-name>
 - 目标目录创建失败或写入失败时不报告成功。
 - 不输出任何凭据或环境变量。
 
-## 8. 错误与退出码
+## 9. 错误与退出码
 
 统一退出码：
 
@@ -167,7 +181,7 @@ easy <skill-name>
 
 需要覆盖的典型错误：未知 skill、缺少 front matter、缺少 `name`/`description`、目标文件冲突、目标目录不可写、非法 `--format` 和非法选项组合。
 
-## 9. 测试策略
+## 10. 测试策略
 
 采用 TDD 的 Red-Green-Refactor 循环，先写失败测试，再实现最小行为。
 
@@ -198,7 +212,7 @@ easy <skill-name>
 4. 重复安装幂等，覆盖行为必须显式确认。
 5. `go test ./...` 和构建命令通过。
 
-## 10. 后续扩展边界
+## 11. 后续扩展边界
 
 后续可在不破坏当前命令契约的前提下增加：
 

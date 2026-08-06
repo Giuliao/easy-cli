@@ -1,0 +1,26 @@
+# Go build artifacts
+/easy
+/bin/
+/dist/
+*.test
+*.out
+coverage.out
+coverage.html
+
+# Generated project-level skill installations
+/.agents/skills/
+
+# Local environment and logs
+.env
+.env.local
+*.log
+*.tmp
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS
+.DS_Store

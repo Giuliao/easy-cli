@@ -19,7 +19,10 @@ func TestEmbeddedSkillsLoadIntoRegistry(t *testing.T) {
 	if got.Description == "" || got.Body == "" {
 		t.Fatalf("embedded skill metadata/body is incomplete: %+v", got)
 	}
-	if err := fstest.TestFS(FS, "smb-work-order/SKILL.md"); err != nil {
+	if _, ok := registry.Get("mysql-ddl-export"); !ok {
+		t.Fatal("embedded skill mysql-ddl-export not found")
+	}
+	if err := fstest.TestFS(FS, "smb-work-order/SKILL.md", "mysql-ddl-export/SKILL.md"); err != nil {
 		t.Fatalf("embedded filesystem is invalid: %v", err)
 	}
 }

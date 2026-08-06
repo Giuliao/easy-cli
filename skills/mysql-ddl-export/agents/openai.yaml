@@ -1,0 +1,4 @@
+interface:
+  display_name: "MySQL DDL Export"
+  short_description: "Export MySQL table DDL via easy CLI"
+  default_prompt: "Use $mysql-ddl-export to inspect and export MySQL table DDL."

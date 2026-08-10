@@ -7,11 +7,13 @@
 ### `cmd/easy`
 
 - [easy CLI Skill 管理工具设计](./2026-08-06-easy-cli-skill-design.md)
+- [easy-cli 聚合 Skill 与使用路由设计](./2026-08-10-easy-cli-aggregate-skill-design.md)
 
 ### `internal/cli`
 
 - [easy CLI Skill 管理工具设计](./2026-08-06-easy-cli-skill-design.md)
 - [MySQL DDL 导出 CLI 设计](./2026-08-06-mysql-ddl-export-design.md)
+- [easy-cli 聚合 Skill 与使用路由设计](./2026-08-10-easy-cli-aggregate-skill-design.md)
 
 ### `internal/prompt`
 
@@ -20,10 +22,24 @@
 ### `internal/skill`
 
 - [easy CLI Skill 管理工具设计](./2026-08-06-easy-cli-skill-design.md)
+- [easy-cli 聚合 Skill 与使用路由设计](./2026-08-10-easy-cli-aggregate-skill-design.md)
+
+### `skills`
+
+- [easy-cli 聚合 Skill 与使用路由设计](./2026-08-10-easy-cli-aggregate-skill-design.md)
+
+### `skills/easy-cli`
+
+- [easy-cli 聚合 Skill 与使用路由设计](./2026-08-10-easy-cli-aggregate-skill-design.md)
+
+### `skills/mysql-ddl-export`
+
+- [easy-cli 聚合 Skill 与使用路由设计](./2026-08-10-easy-cli-aggregate-skill-design.md)
 
 ### `skills/smb-work-order`
 
 - [easy CLI Skill 管理工具设计](./2026-08-06-easy-cli-skill-design.md)
+- [easy-cli 聚合 Skill 与使用路由设计](./2026-08-10-easy-cli-aggregate-skill-design.md)
 
 ### `internal/mysql`
 
@@ -44,3 +60,13 @@
 - `cmd/easy`
 - `internal/cli`
 - `internal/mysql`
+
+### [easy-cli 聚合 Skill 与使用路由设计](./2026-08-10-easy-cli-aggregate-skill-design.md)
+
+- `cmd/easy`
+- `internal/cli`
+- `internal/skill`
+- `skills`
+- `skills/easy-cli`
+- `skills/mysql-ddl-export`
+- `skills/smb-work-order`

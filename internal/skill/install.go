@@ -21,15 +21,24 @@ type InstallResult struct {
 }
 
 func Install(skill Skill, options InstallOptions) (InstallResult, error) {
-	targetPath, err := InstallPath(skill.Name, options)
+	return write(skill, options, false)
+}
+
+func Update(skill Skill, options InstallOptions) (InstallResult, error) {
+	options.Force = true
+	return write(skill, options, true)
+}
+
+func write(selected Skill, options InstallOptions, requireExisting bool) (InstallResult, error) {
+	targetPath, err := InstallPath(selected.Name, options)
 	if err != nil {
 		return InstallResult{}, err
 	}
 	targetDir := filepath.Dir(targetPath)
 
-	content, err := prompt.Compress(skill.Source)
+	content, err := prompt.Compress(selected.Source)
 	if err != nil {
-		return InstallResult{}, fmt.Errorf("compress skill %q: %w", skill.Name, err)
+		return InstallResult{}, fmt.Errorf("compress skill %q: %w", selected.Name, err)
 	}
 	if existing, readErr := os.ReadFile(targetPath); readErr == nil {
 		if string(existing) == content {
@@ -40,6 +49,8 @@ func Install(skill Skill, options InstallOptions) (InstallResult, error) {
 		}
 	} else if !os.IsNotExist(readErr) {
 		return InstallResult{}, fmt.Errorf("read target %s: %w", targetPath, readErr)
+	} else if requireExisting {
+		return InstallResult{}, fmt.Errorf("skill %q is not installed at %s; run easy skill install %s first", selected.Name, targetPath, selected.Name)
 	}
 
 	if err := os.MkdirAll(targetDir, 0o755); err != nil {

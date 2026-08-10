@@ -37,14 +37,23 @@ func Run(args []string, registry *skill.Registry, options Options) int {
 		printHelp(out, registry)
 		return 0
 	}
+	if len(args) == 1 && args[0] == "skill" {
+		printSkillHelp(out)
+		return 0
+	}
 	if len(args) >= 2 && args[0] == "skill" {
 		switch args[1] {
+		case "help", "--help", "-h":
+			printSkillHelp(out)
+			return 0
 		case "list":
 			return runList(args[2:], registry, options, out, errOut)
 		case "show":
 			return runShow(args[2:], registry, options, out, errOut)
 		case "install":
 			return runInstall(args[2:], registry, options, out, errOut)
+		case "update":
+			return runUpdate(args[2:], registry, options, out, errOut)
 		case "prompt":
 			return runPrompt(args[2:], registry, out, errOut)
 		}
@@ -62,17 +71,33 @@ func Run(args []string, registry *skill.Registry, options Options) int {
 func printHelp(out io.Writer, registry *skill.Registry) {
 	fmt.Fprintln(out, "Usage: easy <command>")
 	fprintln(out)
+	fmt.Fprintln(out, "Description: Manage reusable AI skills and export MySQL table DDL.")
+	fprintln(out)
 	fmt.Fprintln(out, "Commands:")
-	fmt.Fprintln(out, "  skill list")
-	fmt.Fprintln(out, "  skill show <name>")
-	fmt.Fprintln(out, "  skill prompt <name>")
-	fmt.Fprintln(out, "  skill install <name>")
-	fmt.Fprintln(out, "  mysql ddl")
+	fmt.Fprintln(out, "  skill list                List available skills and installation status.")
+	fmt.Fprintln(out, "  skill show <name>         Show skill metadata and installation status.")
+	fmt.Fprintln(out, "  skill prompt <name>       Output the skill's compressed, AI-readable prompt.")
+	fmt.Fprintln(out, "  skill install <name>      Install a skill into the project or user scope.")
+	fmt.Fprintln(out, "  skill update <name>       Update an installed skill from the embedded source.")
+	fmt.Fprintln(out, "  mysql ddl                Export MySQL base-table CREATE TABLE DDL.")
 	fprintln(out)
 	fmt.Fprintln(out, "Skills:")
 	for _, selected := range registry.List() {
-		fmt.Fprintf(out, "  %s\n", selected.Name)
+		fmt.Fprintf(out, "  %-25s %s\n", selected.Name, selected.Description)
 	}
+}
+
+func printSkillHelp(out io.Writer) {
+	fmt.Fprintln(out, "Usage: easy skill <command>")
+	fprintln(out)
+	fmt.Fprintln(out, "Description: Manage reusable skills and reusable prompts.")
+	fprintln(out)
+	fmt.Fprintln(out, "Commands:")
+	fmt.Fprintln(out, "  list                     List available skills and installation status.")
+	fmt.Fprintln(out, "  show <name>              Show skill metadata and installation status.")
+	fmt.Fprintln(out, "  prompt <name>            Output the skill's compressed, AI-readable prompt.")
+	fmt.Fprintln(out, "  install <name>           Install a skill into the project or user scope.")
+	fmt.Fprintln(out, "  update <name>            Update an installed skill from the embedded source.")
 }
 
 func fprintln(out io.Writer) {
@@ -159,6 +184,51 @@ func runInstall(args []string, registry *skill.Registry, options Options, out, e
 		fmt.Fprintf(out, "Installed %s to %s\n", name, result.Path)
 	} else {
 		fmt.Fprintf(out, "Already installed %s at %s\n", name, result.Path)
+	}
+	return 0
+}
+
+func runUpdate(args []string, registry *skill.Registry, options Options, out, errOut io.Writer) int {
+	if len(args) == 0 {
+		fmt.Fprintln(errOut, "usage: easy skill update <name> [--global]")
+		return 2
+	}
+	if len(args) == 1 && (args[0] == "--help" || args[0] == "-h") {
+		fmt.Fprintln(out, "usage: easy skill update <name> [--global]")
+		return 0
+	}
+	name := args[0]
+	global := false
+	for _, argument := range args[1:] {
+		switch argument {
+		case "--global":
+			global = true
+		case "--help", "-h":
+			fmt.Fprintln(out, "usage: easy skill update <name> [--global]")
+			return 0
+		default:
+			fmt.Fprintf(errOut, "unknown option %q\n", argument)
+			return 2
+		}
+	}
+	selected, ok := registry.Get(name)
+	if !ok {
+		fmt.Fprintf(errOut, "unknown skill %q\n", name)
+		return 1
+	}
+	result, err := skill.Update(selected, skill.InstallOptions{
+		Global:     global,
+		WorkingDir: options.WorkingDir,
+		HomeDir:    options.HomeDir,
+	})
+	if err != nil {
+		fmt.Fprintf(errOut, "update skill %q: %v\n", name, err)
+		return 1
+	}
+	if result.Changed {
+		fmt.Fprintf(out, "Updated %s to %s\n", name, result.Path)
+	} else {
+		fmt.Fprintf(out, "Already up to date %s at %s\n", name, result.Path)
 	}
 	return 0
 }

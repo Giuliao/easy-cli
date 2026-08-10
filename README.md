@@ -24,6 +24,23 @@ go build -o easy ./cmd/easy
 ./easy skill prompt smb-work-order --format json
 ```
 
+## 通过 easy-cli 使用其他 skill
+
+安装 `easy-cli` 聚合 skill 后，Agent 应把它作为能力路由和命令行用法说明：先选择并调用对应 skill，不要因为识别到 skill 就自动安装。只有用户明确要求管理 skill 时，才执行安装或更新命令。
+
+```bash
+# 发现可用能力
+./easy skill list
+
+# 读取其他 skill 的压缩 prompt
+./easy skill prompt smb-work-order
+./easy smb-work-order
+./easy skill prompt mysql-ddl-export
+
+# 直接执行内置功能
+./easy mysql ddl --host 127.0.0.1 --user root --database app
+```
+
 ## 安装 skill
 
 默认安装到当前项目的 `.agents/skills/`：
@@ -43,6 +60,17 @@ go build -o easy ./cmd/easy
 ```bash
 ./easy skill install smb-work-order --force
 ```
+
+安装和更新大一统 `easy-cli` skill：
+
+```bash
+./easy skill install easy-cli
+./easy skill install easy-cli --global
+./easy skill update easy-cli
+./easy skill update easy-cli --global
+```
+
+`update` 只更新已经安装的 skill；未安装时请先执行 `install`。安装 `easy-cli` 只安装聚合 skill 本身，不会自动安装其他子 skill。
 
 ## 导出 MySQL DDL
 

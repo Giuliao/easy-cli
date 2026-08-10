@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -150,5 +151,75 @@ func TestInstallRejectsConflictUnlessForced(t *testing.T) {
 	}
 	if !result.Changed {
 		t.Fatal("forced Install() Changed = false, want true")
+	}
+}
+
+func TestUpdateRequiresExistingInstallation(t *testing.T) {
+	project := t.TempDir()
+	if err := os.Mkdir(filepath.Join(project, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	parsed, err := Parse("---\nname: demo\ndescription: A demo skill.\n---\nbody\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = Update(parsed, InstallOptions{WorkingDir: project, HomeDir: t.TempDir()})
+	if err == nil || !strings.Contains(err.Error(), "not installed") {
+		t.Fatalf("Update() error = %v, want not-installed error", err)
+	}
+}
+
+func TestUpdateOverwritesInstalledSkill(t *testing.T) {
+	project := t.TempDir()
+	if err := os.Mkdir(filepath.Join(project, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	oldSkill, err := Parse("---\nname: demo\ndescription: A demo skill.\n---\nold body\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	newSkill, err := Parse("---\nname: demo\ndescription: A demo skill.\n---\nnew body\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	options := InstallOptions{WorkingDir: project, HomeDir: t.TempDir()}
+	if _, err := Install(oldSkill, options); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := Update(newSkill, options)
+	if err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+	if !result.Changed {
+		t.Fatal("Update() Changed = false, want true")
+	}
+	content, err := os.ReadFile(result.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(content) != "---\nname: demo\ndescription: A demo skill.\n---\nnew body\n" {
+		t.Fatalf("updated content = %q, want new body", content)
+	}
+}
+
+func TestUpdateIsIdempotentForSameContent(t *testing.T) {
+	project := t.TempDir()
+	parsed, err := Parse("---\nname: demo\ndescription: A demo skill.\n---\nbody\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	options := InstallOptions{WorkingDir: project, HomeDir: t.TempDir()}
+	if _, err := Install(parsed, options); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := Update(parsed, options)
+	if err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+	if result.Changed {
+		t.Fatal("Update() Changed = true, want false")
 	}
 }

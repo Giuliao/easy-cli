@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"testing/fstest"
 
@@ -222,6 +223,78 @@ func TestRunSkillInstallWritesProjectSkill(t *testing.T) {
 	}
 }
 
+func TestRunSkillUpdateWritesUpdatedProjectSkill(t *testing.T) {
+	oldSkill, err := skill.Parse("---\nname: demo\ndescription: A demo skill.\n---\nold body\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	registry, err := skill.Load(fstest.MapFS{
+		"demo/SKILL.md": &fstest.MapFile{Data: []byte("---\nname: demo\ndescription: A demo skill.\n---\nnew body\n")},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	project := t.TempDir()
+	if err := os.Mkdir(filepath.Join(project, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	options := skill.InstallOptions{WorkingDir: project, HomeDir: t.TempDir()}
+	if _, err := skill.Install(oldSkill, options); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"skill", "update", "demo"}, registry, Options{
+		WorkingDir: project,
+		HomeDir:    options.HomeDir,
+		Out:        &stdout,
+		ErrOut:     &stderr,
+	})
+
+	if code != 0 {
+		t.Fatalf("Run() code = %d, want 0; stderr = %q", code, stderr.String())
+	}
+	want := "Updated demo to " + filepath.Join(project, ".agents", "skills", "demo", "SKILL.md") + "\n"
+	if stdout.String() != want {
+		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
+	}
+	content, err := os.ReadFile(filepath.Join(project, ".agents", "skills", "demo", "SKILL.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(content) != "---\nname: demo\ndescription: A demo skill.\n---\nnew body\n" {
+		t.Fatalf("updated content = %q, want new body", content)
+	}
+}
+
+func TestRunSkillUpdateRequiresInstallation(t *testing.T) {
+	registry, err := skill.Load(fstest.MapFS{
+		"demo/SKILL.md": &fstest.MapFile{Data: []byte("---\nname: demo\ndescription: A demo skill.\n---\nbody\n")},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	project := t.TempDir()
+	if err := os.Mkdir(filepath.Join(project, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"skill", "update", "demo"}, registry, Options{
+		WorkingDir: project,
+		HomeDir:    t.TempDir(),
+		Out:        &stdout,
+		ErrOut:     &stderr,
+	})
+
+	if code != 1 {
+		t.Fatalf("Run() code = %d, want 1", code)
+	}
+	if !strings.Contains(stderr.String(), "not installed") || !strings.Contains(stderr.String(), "easy skill install demo") {
+		t.Fatalf("stderr = %q, want actionable not-installed error", stderr.String())
+	}
+}
+
 func TestRunSkillNameActsAsPromptShortcut(t *testing.T) {
 	registry, err := skill.Load(fstest.MapFS{
 		"demo/SKILL.md": &fstest.MapFile{Data: []byte("---\nname: demo\ndescription: A demo skill.\n---\nbody\n")},
@@ -255,7 +328,27 @@ func TestRunWithoutArgumentsPrintsHelp(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("Run() code = %d, want 0; stderr = %q", code, stderr.String())
 	}
-	want := "Usage: easy <command>\n\nCommands:\n  skill list\n  skill show <name>\n  skill prompt <name>\n  skill install <name>\n  mysql ddl\n\nSkills:\n  demo\n"
+	want := "Usage: easy <command>\n\nDescription: Manage reusable AI skills and export MySQL table DDL.\n\nCommands:\n  skill list                List available skills and installation status.\n  skill show <name>         Show skill metadata and installation status.\n  skill prompt <name>       Output the skill's compressed, AI-readable prompt.\n  skill install <name>      Install a skill into the project or user scope.\n  skill update <name>       Update an installed skill from the embedded source.\n  mysql ddl                Export MySQL base-table CREATE TABLE DDL.\n\nSkills:\n  demo                      A demo skill.\n"
+	if stdout.String() != want {
+		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
+	}
+}
+
+func TestRunSkillHelpPrintsCommandDescriptions(t *testing.T) {
+	registry, err := skill.Load(fstest.MapFS{
+		"demo/SKILL.md": &fstest.MapFile{Data: []byte("---\nname: demo\ndescription: A demo skill.\n---\nbody\n")},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"skill", "--help"}, registry, Options{Out: &stdout, ErrOut: &stderr})
+
+	if code != 0 {
+		t.Fatalf("Run() code = %d, want 0; stderr = %q", code, stderr.String())
+	}
+	want := "Usage: easy skill <command>\n\nDescription: Manage reusable skills and reusable prompts.\n\nCommands:\n  list                     List available skills and installation status.\n  show <name>              Show skill metadata and installation status.\n  prompt <name>            Output the skill's compressed, AI-readable prompt.\n  install <name>           Install a skill into the project or user scope.\n  update <name>            Update an installed skill from the embedded source.\n"
 	if stdout.String() != want {
 		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}

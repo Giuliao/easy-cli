@@ -20,11 +20,38 @@ const (
 var (
 	ErrKeyUnavailable = errors.New("configuration key is not available")
 	ErrKeyNotSet      = errors.New("configuration key is not set")
+	ErrConfigExists   = errors.New("configuration file already exists")
 )
+
+const homeConfigTemplate = `{
+  "mysql": {
+    "host": "",
+    "port": 3306,
+    "user": "",
+    "password": "",
+    "database": ""
+  },
+  "smb": {
+    "backend_repo": "",
+    "frontend_repo": "",
+    "idl_repo": ""
+  }
+}
+`
 
 type LoadOptions struct {
 	WorkingDir string
 	HomeDir    string
+}
+
+type InitOptions struct {
+	HomeDir string
+	Force   bool
+}
+
+type InitResult struct {
+	Path    string
+	Changed bool
 }
 
 type Config struct {
@@ -98,6 +125,94 @@ func Load(options LoadOptions) (Config, error) {
 		}
 	}
 	return config, nil
+}
+
+func InitHome(options InitOptions) (InitResult, error) {
+	homeDir := options.HomeDir
+	if homeDir == "" {
+		var err error
+		homeDir, err = os.UserHomeDir()
+		if err != nil {
+			return InitResult{}, fmt.Errorf("get home directory: %w", err)
+		}
+	}
+	target := filepath.Join(homeDir, ".config", configDirectory, configFileName)
+	directory := filepath.Dir(target)
+	if err := os.MkdirAll(directory, 0o700); err != nil {
+		return InitResult{}, fmt.Errorf("create configuration directory: %w", err)
+	}
+	if err := os.Chmod(directory, 0o700); err != nil {
+		return InitResult{}, fmt.Errorf("set configuration directory permissions: %w", err)
+	}
+	if options.Force {
+		if err := writeConfigAtomically(target, homeConfigTemplate); err != nil {
+			return InitResult{}, err
+		}
+		return InitResult{Path: target, Changed: true}, nil
+	}
+	if err := writeNewConfig(target, homeConfigTemplate); err != nil {
+		if errors.Is(err, os.ErrExist) {
+			return InitResult{}, fmt.Errorf("%w: %s; run easy config init --force to replace it", ErrConfigExists, target)
+		}
+		return InitResult{}, err
+	}
+	return InitResult{Path: target, Changed: true}, nil
+}
+
+func writeNewConfig(path, contents string) error {
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return err
+	}
+	name := file.Name()
+	if err := file.Chmod(0o600); err != nil {
+		_ = file.Close()
+		_ = os.Remove(name)
+		return fmt.Errorf("set configuration file permissions: %w", err)
+	}
+	if _, err := file.WriteString(contents); err != nil {
+		_ = file.Close()
+		_ = os.Remove(name)
+		return fmt.Errorf("write configuration file: %w", err)
+	}
+	if err := file.Sync(); err != nil {
+		_ = file.Close()
+		_ = os.Remove(name)
+		return fmt.Errorf("sync configuration file: %w", err)
+	}
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("close configuration file: %w", err)
+	}
+	return nil
+}
+
+func writeConfigAtomically(path, contents string) error {
+	directory := filepath.Dir(path)
+	temporary, err := os.CreateTemp(directory, ".config.json.*.tmp")
+	if err != nil {
+		return fmt.Errorf("create temporary configuration file: %w", err)
+	}
+	temporaryName := temporary.Name()
+	defer os.Remove(temporaryName)
+	if err := temporary.Chmod(0o600); err != nil {
+		_ = temporary.Close()
+		return fmt.Errorf("set temporary configuration file permissions: %w", err)
+	}
+	if _, err := temporary.WriteString(contents); err != nil {
+		_ = temporary.Close()
+		return fmt.Errorf("write temporary configuration file: %w", err)
+	}
+	if err := temporary.Sync(); err != nil {
+		_ = temporary.Close()
+		return fmt.Errorf("sync temporary configuration file: %w", err)
+	}
+	if err := temporary.Close(); err != nil {
+		return fmt.Errorf("close temporary configuration file: %w", err)
+	}
+	if err := os.Rename(temporaryName, path); err != nil {
+		return fmt.Errorf("replace configuration file: %w", err)
+	}
+	return nil
 }
 
 func read(path string) (source, bool, error) {

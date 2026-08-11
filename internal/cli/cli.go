@@ -89,6 +89,7 @@ func printHelp(out io.Writer, registry *skill.Registry) {
 	fmt.Fprintln(out, "  skill prompt <name>       Output the skill's compressed, AI-readable prompt.")
 	fmt.Fprintln(out, "  skill install <name>      Install a skill into the project or user scope.")
 	fmt.Fprintln(out, "  skill update <name>       Update an installed skill from the embedded source.")
+	fmt.Fprintln(out, "  config init [--force]     Create the private Home configuration template.")
 	fmt.Fprintln(out, "  config get <key>          Print an allowed non-sensitive configuration value.")
 	fmt.Fprintln(out, "  mysql ddl                 Export MySQL base-table CREATE TABLE DDL.")
 	fmt.Fprintln(out, "  mysql query               Execute SQL and output database rows.")

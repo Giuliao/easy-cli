@@ -50,12 +50,15 @@ The shorthand is equivalent to `easy skill prompt <skill-name>` and outputs the 
 | Read MySQL DDL workflow | `easy skill prompt mysql-ddl-export` | Load connection, password, safety, and result-handling rules |
 | Export MySQL table DDL | `easy mysql ddl ...` | Execute the read-only DDL export |
 | Query MySQL data | `easy mysql query --sql <statement>` | Execute the supplied SQL and return JSON rows by default |
+| Initialize Home configuration | `easy config init` | Create a private local template when the user explicitly requests setup |
 | Read a configured value | `easy config get <key>` | Read one allowed non-sensitive Home/project configuration value |
 | Inspect one skill | `easy skill show <skill-name>` | Read metadata and installation status |
 
 ## Configuration
 
 easy loads `~/.config/easy-cli/config.json` first, then `<project-root>/.easy-cli/config.json`; fields in the project file override Home fields. Explicit MySQL flags override both configuration files. MySQL connection fields can therefore be omitted when they are already configured, but `mysql query --sql <statement>` remains required.
+
+Only when the user explicitly asks to create or reset Home configuration, run `easy config init`; it creates a private template and refuses to overwrite an existing file unless the user explicitly requests `easy config init --force`. Do not initialize configuration merely because a value is missing.
 
 Use `easy config get <key>` only for allowed non-sensitive values, especially SMB repository paths. `mysql.password` is intentionally unavailable from this command. Do not print or request a configured password merely to inspect configuration.
 

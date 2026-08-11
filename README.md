@@ -26,14 +26,17 @@ go build -o easy ./cmd/easy
 
 ## 配置
 
-easy 会先读取 Home 配置 `~/.config/easy-cli/config.json`，再读取当前 Git 项目的 `.easy-cli/config.json`；项目文件按字段覆盖 Home 文件。真实项目配置已被 Git 忽略，可从 [.easy-cli/config.example.json](.easy-cli/config.example.json) 复制并填写：
+easy 会先读取 Home 配置 `~/.config/easy-cli/config.json`，再读取当前 Git 项目的 `.easy-cli/config.json`；项目文件按字段覆盖 Home 文件。初始化仅当前用户可读的 Home 模板：
+
+```bash
+./easy config init
+```
+
+目标已存在时命令不会覆盖。只有明确要重置 Home 配置时才使用 `./easy config init --force`。初始化不会修改项目配置。真实项目配置已被 Git 忽略；可从 [.easy-cli/config.example.json](.easy-cli/config.example.json) 创建：
 
 ```bash
 mkdir -p .easy-cli
 cp .easy-cli/config.example.json .easy-cli/config.json
-mkdir -p ~/.config/easy-cli
-cp .easy-cli/config.example.json ~/.config/easy-cli/config.json
-chmod 600 ~/.config/easy-cli/config.json
 ```
 
 配置可保存 MySQL 的 `host`、`port`、`user`、`password`、`database`，以及 SMB 后端、前端和 IDL 仓库路径。优先级为：

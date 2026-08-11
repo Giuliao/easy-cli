@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -329,7 +330,7 @@ func TestRunWithoutArgumentsPrintsHelp(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("Run() code = %d, want 0; stderr = %q", code, stderr.String())
 	}
-	want := "Usage: easy <command>\n\nDescription: Manage reusable AI skills and MySQL database access.\n\nCommands:\n  skill list                List available skills and installation status.\n  skill show <name>         Show skill metadata and installation status.\n  skill prompt <name>       Output the skill's compressed, AI-readable prompt.\n  skill install <name>      Install a skill into the project or user scope.\n  skill update <name>       Update an installed skill from the embedded source.\n  config get <key>          Print an allowed non-sensitive configuration value.\n  mysql ddl                 Export MySQL base-table CREATE TABLE DDL.\n  mysql query               Execute SQL and output database rows.\n\nSkills:\n  demo                      A demo skill.\n"
+	want := "Usage: easy <command>\n\nDescription: Manage reusable AI skills and MySQL database access.\n\nCommands:\n  skill list                List available skills and installation status.\n  skill show <name>         Show skill metadata and installation status.\n  skill prompt <name>       Output the skill's compressed, AI-readable prompt.\n  skill install <name>      Install a skill into the project or user scope.\n  skill update <name>       Update an installed skill from the embedded source.\n  config init [--force]     Create the private Home configuration template.\n  config get <key>          Print an allowed non-sensitive configuration value.\n  mysql ddl                 Export MySQL base-table CREATE TABLE DDL.\n  mysql query               Execute SQL and output database rows.\n\nSkills:\n  demo                      A demo skill.\n"
 	if stdout.String() != want {
 		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}
@@ -352,6 +353,52 @@ func TestRunConfigGetPrintsAllowedMergedValue(t *testing.T) {
 	}
 	if stdout.String() != "/code/smb-backend\n" {
 		t.Fatalf("stdout = %q, want config value", stdout.String())
+	}
+}
+
+func TestRunConfigInitCreatesHomeTemplateWithoutReadingBrokenConfig(t *testing.T) {
+	registry, err := skill.Load(fstest.MapFS{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	home := t.TempDir()
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"config", "init"}, registry, Options{
+		HomeDir:   home,
+		ConfigErr: errors.New("broken existing configuration"),
+		Out:       &stdout,
+		ErrOut:    &stderr,
+	})
+
+	if code != 0 {
+		t.Fatalf("Run() code = %d, want 0; stderr = %q", code, stderr.String())
+	}
+	wantPath := filepath.Join(home, ".config", "easy-cli", "config.json")
+	if stdout.String() != "Initialized configuration at "+wantPath+"\n" {
+		t.Fatalf("stdout = %q, want initialized path", stdout.String())
+	}
+	if _, err := os.Stat(wantPath); err != nil {
+		t.Fatalf("home configuration not created: %v", err)
+	}
+}
+
+func TestRunConfigInitRejectsRepeatedForce(t *testing.T) {
+	registry, err := skill.Load(fstest.MapFS{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"config", "init", "--force", "--force"}, registry, Options{
+		HomeDir: t.TempDir(),
+		Out:     &stdout,
+		ErrOut:  &stderr,
+	})
+
+	if code != 2 {
+		t.Fatalf("Run() code = %d, want 2; stderr = %q", code, stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "only once") {
+		t.Fatalf("stderr = %q, want repeated-force error", stderr.String())
 	}
 }
 
@@ -386,7 +433,7 @@ func TestRunConfigHelpDescribesLocationsAndPasswordProtection(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("Run() code = %d, want 0; stderr = %q", code, stderr.String())
 	}
-	if !strings.Contains(stdout.String(), "~/.config/easy-cli/config.json") || !strings.Contains(stdout.String(), ".easy-cli/config.json") || !strings.Contains(stdout.String(), "password") {
+	if !strings.Contains(stdout.String(), "~/.config/easy-cli/config.json") || !strings.Contains(stdout.String(), ".easy-cli/config.json") || !strings.Contains(stdout.String(), "password") || !strings.Contains(stdout.String(), "init [--force]") {
 		t.Fatalf("stdout = %q, want config locations and password protection", stdout.String())
 	}
 }

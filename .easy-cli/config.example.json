@@ -1,0 +1,14 @@
+{
+  "mysql": {
+    "host": "db.example.internal",
+    "port": 3306,
+    "user": "readonly",
+    "password": "set-this-locally",
+    "database": "app"
+  },
+  "smb": {
+    "backend_repo": "/path/to/smb_application",
+    "frontend_repo": "/path/to/lark_smb_work_order_fe",
+    "idl_repo": "/path/to/lark_smb_agent_idl"
+  }
+}

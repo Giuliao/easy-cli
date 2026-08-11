@@ -8,6 +8,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/bytedance/easy-cli/internal/config"
 	"github.com/bytedance/easy-cli/internal/mysql"
 	"github.com/bytedance/easy-cli/internal/skill"
 )
@@ -73,6 +74,89 @@ func TestRunMySQLDDLReadsPasswordFromStdin(t *testing.T) {
 	}
 	if strings.Contains(stdout.String()+stderr.String(), password) {
 		t.Fatal("password leaked to command output")
+	}
+}
+
+func TestRunMySQLDDLUsesConfiguredConnection(t *testing.T) {
+	registry, err := skill.Load(fstest.MapFS{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got mysql.ConnectionOptions
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"mysql", "ddl"}, registry, Options{
+		Config: config.Config{MySQL: config.MySQL{
+			Host: "configured.db.internal", Port: 3307, User: "configured-user", Password: "configured-password", Database: "configured-db",
+		}},
+		Out: &stdout, ErrOut: &stderr,
+		MySQLExport: func(_ context.Context, options mysql.ConnectionOptions) (string, error) {
+			got = options
+			return "", nil
+		},
+	})
+
+	if code != 0 {
+		t.Fatalf("Run() code = %d, want 0; stderr = %q", code, stderr.String())
+	}
+	if got.Host != "configured.db.internal" || got.Port != 3307 || got.User != "configured-user" || got.Password != "configured-password" || got.Database != "configured-db" {
+		t.Fatalf("connection options = %+v, want configured values", got)
+	}
+}
+
+func TestRunMySQLDDLFlagsOverrideConfiguredConnection(t *testing.T) {
+	registry, err := skill.Load(fstest.MapFS{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got mysql.ConnectionOptions
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"mysql", "ddl", "--host", "flag.db.internal", "--port", "3310", "--user", "flag-user", "--password", "flag-password", "--database", "flag-db",
+	}, registry, Options{
+		Config: config.Config{MySQL: config.MySQL{
+			Host: "configured.db.internal", Port: 3307, User: "configured-user", Password: "configured-password", Database: "configured-db",
+		}},
+		Out: &stdout, ErrOut: &stderr,
+		MySQLExport: func(_ context.Context, options mysql.ConnectionOptions) (string, error) {
+			got = options
+			return "", nil
+		},
+	})
+
+	if code != 0 {
+		t.Fatalf("Run() code = %d, want 0; stderr = %q", code, stderr.String())
+	}
+	if got.Host != "flag.db.internal" || got.Port != 3310 || got.User != "flag-user" || got.Password != "flag-password" || got.Database != "flag-db" {
+		t.Fatalf("connection options = %+v, want flag values", got)
+	}
+}
+
+func TestRunMySQLQueryStdinPasswordOverridesConfiguredPassword(t *testing.T) {
+	registry, err := skill.Load(fstest.MapFS{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var password string
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"mysql", "query", "--password-stdin", "--sql", "SELECT 1"}, registry, Options{
+		Config: config.Config{MySQL: config.MySQL{
+			Host: "configured.db.internal", Port: 3307, User: "configured-user", Password: "configured-password", Database: "configured-db",
+		}},
+		In: strings.NewReader("stdin-password\n"), Out: &stdout, ErrOut: &stderr,
+		MySQLQuery: func(_ context.Context, options mysql.ConnectionOptions, _ string) (mysql.QueryResult, error) {
+			password = options.Password
+			return mysql.QueryResult{}, nil
+		},
+	})
+
+	if code != 0 {
+		t.Fatalf("Run() code = %d, want 0; stderr = %q", code, stderr.String())
+	}
+	if password != "stdin-password" {
+		t.Fatalf("password = %q, want stdin password", password)
+	}
+	if strings.Contains(stdout.String()+stderr.String(), "stdin-password") {
+		t.Fatal("stdin password leaked to command output")
 	}
 }
 
@@ -268,5 +352,48 @@ func TestRunMySQLQueryHelpDescribesUnrestrictedSQL(t *testing.T) {
 	}
 	if !strings.Contains(stdout.String(), "--sql <statement>") || !strings.Contains(stdout.String(), "without CLI filtering") {
 		t.Fatalf("stdout = %q, want SQL behavior description", stdout.String())
+	}
+}
+
+func TestRunMySQLQueryDoesNotTreatSQLValueAsHelp(t *testing.T) {
+	registry, err := skill.Load(fstest.MapFS{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"mysql", "query", "--sql", "--help"}, registry, Options{Out: &stdout, ErrOut: &stderr})
+
+	if code != 2 {
+		t.Fatalf("Run() code = %d, want 2; stdout = %q, stderr = %q", code, stdout.String(), stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "--sql requires a non-empty value") {
+		t.Fatalf("stderr = %q, want SQL value error", stderr.String())
+	}
+}
+
+func TestRunMySQLQueryAllowsStatementStartingWithComment(t *testing.T) {
+	registry, err := skill.Load(fstest.MapFS{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	statement := "-- explain this query\nSELECT 1"
+	var gotStatement string
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"mysql", "query", "--sql", statement}, registry, Options{
+		Config: config.Config{MySQL: config.MySQL{
+			Host: "configured.db.internal", Port: 3306, User: "configured-user", Password: "configured-password", Database: "configured-db",
+		}},
+		Out: &stdout, ErrOut: &stderr,
+		MySQLQuery: func(_ context.Context, _ mysql.ConnectionOptions, sql string) (mysql.QueryResult, error) {
+			gotStatement = sql
+			return mysql.QueryResult{}, nil
+		},
+	})
+
+	if code != 0 {
+		t.Fatalf("Run() code = %d, want 0; stderr = %q", code, stderr.String())
+	}
+	if gotStatement != statement {
+		t.Fatalf("statement = %q, want %q", gotStatement, statement)
 	}
 }

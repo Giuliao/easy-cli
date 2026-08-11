@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/bytedance/easy-cli/internal/cli"
+	"github.com/bytedance/easy-cli/internal/config"
 	"github.com/bytedance/easy-cli/internal/skill"
 	"github.com/bytedance/easy-cli/skills"
 )
@@ -25,9 +26,12 @@ func run(args []string, out, errOut io.Writer, workingDir, homeDir string) int {
 		fmt.Fprintf(errOut, "load embedded skills: %v\n", err)
 		return 1
 	}
+	loadedConfig, configErr := config.Load(config.LoadOptions{WorkingDir: workingDir, HomeDir: homeDir})
 	return cli.Run(args, registry, cli.Options{
 		WorkingDir: workingDir,
 		HomeDir:    homeDir,
+		Config:     loadedConfig,
+		ConfigErr:  configErr,
 		In:         os.Stdin,
 		Out:        out,
 		ErrOut:     errOut,

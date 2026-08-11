@@ -9,6 +9,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/bytedance/easy-cli/internal/config"
 	"github.com/bytedance/easy-cli/internal/skill"
 )
 
@@ -328,9 +329,65 @@ func TestRunWithoutArgumentsPrintsHelp(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("Run() code = %d, want 0; stderr = %q", code, stderr.String())
 	}
-	want := "Usage: easy <command>\n\nDescription: Manage reusable AI skills and export MySQL table DDL.\n\nCommands:\n  skill list                List available skills and installation status.\n  skill show <name>         Show skill metadata and installation status.\n  skill prompt <name>       Output the skill's compressed, AI-readable prompt.\n  skill install <name>      Install a skill into the project or user scope.\n  skill update <name>       Update an installed skill from the embedded source.\n  mysql ddl                Export MySQL base-table CREATE TABLE DDL.\n  mysql query              Execute SQL and output database rows.\n\nSkills:\n  demo                      A demo skill.\n"
+	want := "Usage: easy <command>\n\nDescription: Manage reusable AI skills and MySQL database access.\n\nCommands:\n  skill list                List available skills and installation status.\n  skill show <name>         Show skill metadata and installation status.\n  skill prompt <name>       Output the skill's compressed, AI-readable prompt.\n  skill install <name>      Install a skill into the project or user scope.\n  skill update <name>       Update an installed skill from the embedded source.\n  config get <key>          Print an allowed non-sensitive configuration value.\n  mysql ddl                 Export MySQL base-table CREATE TABLE DDL.\n  mysql query               Execute SQL and output database rows.\n\nSkills:\n  demo                      A demo skill.\n"
 	if stdout.String() != want {
 		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
+	}
+}
+
+func TestRunConfigGetPrintsAllowedMergedValue(t *testing.T) {
+	registry, err := skill.Load(fstest.MapFS{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"config", "get", "smb.backend-repo"}, registry, Options{
+		Config: config.Config{SMB: config.SMB{BackendRepo: "/code/smb-backend"}},
+		Out:    &stdout,
+		ErrOut: &stderr,
+	})
+
+	if code != 0 {
+		t.Fatalf("Run() code = %d, want 0; stderr = %q", code, stderr.String())
+	}
+	if stdout.String() != "/code/smb-backend\n" {
+		t.Fatalf("stdout = %q, want config value", stdout.String())
+	}
+}
+
+func TestRunConfigGetRejectsPasswordWithoutLeakingIt(t *testing.T) {
+	registry, err := skill.Load(fstest.MapFS{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"config", "get", "mysql.password"}, registry, Options{
+		Config: config.Config{MySQL: config.MySQL{Password: "secret-value"}},
+		Out:    &stdout,
+		ErrOut: &stderr,
+	})
+
+	if code != 2 {
+		t.Fatalf("Run() code = %d, want 2; stderr = %q", code, stderr.String())
+	}
+	if strings.Contains(stdout.String()+stderr.String(), "secret-value") {
+		t.Fatal("password leaked to command output")
+	}
+}
+
+func TestRunConfigHelpDescribesLocationsAndPasswordProtection(t *testing.T) {
+	registry, err := skill.Load(fstest.MapFS{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"config", "--help"}, registry, Options{Out: &stdout, ErrOut: &stderr})
+
+	if code != 0 {
+		t.Fatalf("Run() code = %d, want 0; stderr = %q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "~/.config/easy-cli/config.json") || !strings.Contains(stdout.String(), ".easy-cli/config.json") || !strings.Contains(stdout.String(), "password") {
+		t.Fatalf("stdout = %q, want config locations and password protection", stdout.String())
 	}
 }
 

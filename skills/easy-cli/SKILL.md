@@ -50,17 +50,23 @@ The shorthand is equivalent to `easy skill prompt <skill-name>` and outputs the 
 | Read MySQL DDL workflow | `easy skill prompt mysql-ddl-export` | Load connection, password, safety, and result-handling rules |
 | Export MySQL table DDL | `easy mysql ddl ...` | Execute the read-only DDL export |
 | Query MySQL data | `easy mysql query --sql <statement>` | Execute the supplied SQL and return JSON rows by default |
+| Read a configured value | `easy config get <key>` | Read one allowed non-sensitive Home/project configuration value |
 | Inspect one skill | `easy skill show <skill-name>` | Read metadata and installation status |
 
-For MySQL DDL requests, first load `mysql-ddl-export` when its workflow is needed, then execute `easy mysql ddl` with the user-confirmed connection details. Do not treat reading a prompt as completing the database export.
+## Configuration
 
-For MySQL data requests, execute `easy mysql query` with the confirmed connection details and the user's SQL:
+easy loads `~/.config/easy-cli/config.json` first, then `<project-root>/.easy-cli/config.json`; fields in the project file override Home fields. Explicit MySQL flags override both configuration files. MySQL connection fields can therefore be omitted when they are already configured, but `mysql query --sql <statement>` remains required.
+
+Use `easy config get <key>` only for allowed non-sensitive values, especially SMB repository paths. `mysql.password` is intentionally unavailable from this command. Do not print or request a configured password merely to inspect configuration.
+
+For SMB work-order tasks, load `smb-work-order` first, then resolve only the repository needed for the request with `easy config get smb.backend-repo`, `easy config get smb.frontend-repo`, or `easy config get smb.idl-repo`.
+
+For MySQL DDL requests, first load `mysql-ddl-export` when its workflow is needed, then execute `easy mysql ddl` with the user-confirmed connection details or configured defaults. Do not treat reading a prompt as completing the database export.
+
+For MySQL data requests, execute `easy mysql query` with the confirmed connection details and the user's SQL. Configured connection fields can be omitted:
 
     easy mysql query \
-      --host "$MYSQL_HOST" \
-      --user "$MYSQL_USER" \
       --password-stdin \
-      --database "$MYSQL_DATABASE" \
       --sql "$MYSQL_SQL"
 
 The query command sends the SQL as provided and does not restrict it to SELECT or other read-only statements. Confirm the target database and the possible write effect before running it. Use `--format table` for terminal-oriented output; JSON is the default for Agent processing.

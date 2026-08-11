@@ -10,6 +10,9 @@ coverage.html
 # Generated project-level skill installations
 /.agents/skills/
 
+# Local easy CLI configuration (may contain credentials)
+/.easy-cli/config.json
+
 # Local environment and logs
 .env
 .env.local

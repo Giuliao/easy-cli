@@ -26,6 +26,7 @@
 
 - `cmd/easy`
 - `internal/config`
+- `internal/projectroot`
 - `internal/cli`
 - `internal/mysql`
 - `skills/easy-cli`
@@ -144,9 +145,9 @@ README 说明文件位置、覆盖规则、无密示例、MySQL 命令如何使�
 
 新增 `internal/config` 作为唯一的配置文件定位、严格 JSON 解码、字段级合并和安全键查询入口。它不依赖 CLI 输出或 MySQL 驱动。
 
-`cmd/easy` 使用当前工作目录和 Home 目录创建配置加载依赖，并传入 `cli.Options`。`internal/cli` 在运行 MySQL 命令和 `config get` 前加载合并后的配置；MySQL 命令解析重构为“显式 flag 覆盖值 + 合并 + 校验”三个阶段。`internal/mysql` 继续只接收最终的 `ConnectionOptions`，不感知文件系统或配置优先级。
+`cmd/easy` 使用当前工作目录和 Home 目录加载配置，并将结果或加载错误传入 `cli.Options`。`internal/cli` 仅在 MySQL 命令和 `config get` 中消费该结果，使 skill 管理和帮助不受无关配置错误影响；MySQL 命令解析重构为“显式 flag 覆盖值 + 合并 + 校验”三个阶段。`internal/mysql` 继续只接收最终的 `ConnectionOptions`，不感知文件系统或配置优先级。
 
-项目根定位逻辑应被复用或提取，避免 skill 安装与项目配置对“当前项目”的判断产生差异。
+`internal/projectroot` 提供项目根定位，供 skill 安装和项目配置共同使用，避免两者对“当前项目”的判断产生差异。
 
 ## 9. 错误处理与安全
 

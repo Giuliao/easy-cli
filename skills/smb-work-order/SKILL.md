@@ -5,14 +5,15 @@ description: SMB 小工单项目的本地开发约束与交付规范。
 
 # SMB 小工单项目本地开发约束
 
-## 默认项目上下文
+## 项目上下文配置
 
-| 对象 | 默认位置 |
-|-|-|
-| 后端 | /Users/bytedance/CodeHub/smb_application |
-| 前端 | /Users/bytedance/CodeHub/lark_smb_work_order_fe |
-| IDL | /Users/bytedance/CodeHub/lark_smb_agent_idl |
-| 重点业务范围 | smb_application/mfg_lark_order |
+不要假设或硬编码本机 SMB 仓库路径。需要定位某个仓库时，先按实际任务范围读取相应配置：
+
+    easy config get smb.backend-repo
+    easy config get smb.frontend-repo
+    easy config get smb.idl-repo
+
+后端重点业务范围为 `mfg_lark_order`。如果所需配置不存在，要求用户提供路径或在 easy 配置中设置；不得回退到历史路径。
 
 实际改动范围以用户本次请求为准。不得因为存在三个仓库就默认修改全部仓库。实现阶段默认使用隔离 worktree，避免影响当前目录；若用户明确要求在当前分支开发，则遵循用户要求。基线分支必须来自用户输入、任务文档或远端分支事实，不得硬编码历史基线。
 

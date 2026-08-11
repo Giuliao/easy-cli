@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/bytedance/easy-cli/internal/config"
 	"github.com/bytedance/easy-cli/internal/mysql"
 	"github.com/bytedance/easy-cli/internal/prompt"
 	"github.com/bytedance/easy-cli/internal/skill"
@@ -15,6 +16,8 @@ import (
 type Options struct {
 	WorkingDir  string
 	HomeDir     string
+	Config      config.Config
+	ConfigErr   error
 	In          io.Reader
 	Out         io.Writer
 	ErrOut      io.Writer
@@ -36,6 +39,9 @@ func Run(args []string, registry *skill.Registry, options Options) int {
 	}
 	if len(args) >= 2 && args[0] == "mysql" && args[1] == "query" {
 		return runMySQLQuery(args[2:], options, out, errOut)
+	}
+	if len(args) >= 1 && args[0] == "config" {
+		return runConfig(args[1:], options, out, errOut)
 	}
 	if len(args) == 0 || args[0] == "help" || args[0] == "--help" || args[0] == "-h" {
 		printHelp(out, registry)
@@ -75,7 +81,7 @@ func Run(args []string, registry *skill.Registry, options Options) int {
 func printHelp(out io.Writer, registry *skill.Registry) {
 	fmt.Fprintln(out, "Usage: easy <command>")
 	fprintln(out)
-	fmt.Fprintln(out, "Description: Manage reusable AI skills and export MySQL table DDL.")
+	fmt.Fprintln(out, "Description: Manage reusable AI skills and MySQL database access.")
 	fprintln(out)
 	fmt.Fprintln(out, "Commands:")
 	fmt.Fprintln(out, "  skill list                List available skills and installation status.")
@@ -83,8 +89,9 @@ func printHelp(out io.Writer, registry *skill.Registry) {
 	fmt.Fprintln(out, "  skill prompt <name>       Output the skill's compressed, AI-readable prompt.")
 	fmt.Fprintln(out, "  skill install <name>      Install a skill into the project or user scope.")
 	fmt.Fprintln(out, "  skill update <name>       Update an installed skill from the embedded source.")
-	fmt.Fprintln(out, "  mysql ddl                Export MySQL base-table CREATE TABLE DDL.")
-	fmt.Fprintln(out, "  mysql query              Execute SQL and output database rows.")
+	fmt.Fprintln(out, "  config get <key>          Print an allowed non-sensitive configuration value.")
+	fmt.Fprintln(out, "  mysql ddl                 Export MySQL base-table CREATE TABLE DDL.")
+	fmt.Fprintln(out, "  mysql query               Execute SQL and output database rows.")
 	fprintln(out)
 	fmt.Fprintln(out, "Skills:")
 	for _, selected := range registry.List() {

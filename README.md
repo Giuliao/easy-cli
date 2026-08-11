@@ -24,6 +24,40 @@ go build -o easy ./cmd/easy
 ./easy skill prompt smb-work-order --format json
 ```
 
+## 配置
+
+easy 会先读取 Home 配置 `~/.config/easy-cli/config.json`，再读取当前 Git 项目的 `.easy-cli/config.json`；项目文件按字段覆盖 Home 文件。真实项目配置已被 Git 忽略，可从 [.easy-cli/config.example.json](.easy-cli/config.example.json) 复制并填写：
+
+```bash
+mkdir -p .easy-cli
+cp .easy-cli/config.example.json .easy-cli/config.json
+mkdir -p ~/.config/easy-cli
+cp .easy-cli/config.example.json ~/.config/easy-cli/config.json
+chmod 600 ~/.config/easy-cli/config.json
+```
+
+配置可保存 MySQL 的 `host`、`port`、`user`、`password`、`database`，以及 SMB 后端、前端和 IDL 仓库路径。优先级为：
+
+```text
+命令行显式参数 > 项目配置 > Home 配置 > MySQL 端口默认值 3306
+```
+
+查看合并后的非敏感值：
+
+```bash
+./easy config get smb.backend-repo
+./easy config get mysql.database
+```
+
+`easy config get` 永远不会输出 `mysql.password`。若连接字段都已经配置，MySQL 命令可省略这些 flag：
+
+```bash
+./easy mysql ddl
+./easy mysql query --sql 'SELECT id, name FROM users LIMIT 20'
+```
+
+SMB skill 会通过 `easy config get smb.*-repo` 获取仓库位置；未配置时会要求提供路径，而不会使用写死的个人目录。
+
 ## 通过 easy-cli 使用其他 skill
 
 安装 `easy-cli` 聚合 skill 后，Agent 应把它作为能力路由和命令行用法说明：先选择并调用对应 skill，不要因为识别到 skill 就自动安装。只有用户明确要求管理 skill 时，才执行安装或更新命令。
@@ -38,7 +72,7 @@ go build -o easy ./cmd/easy
 ./easy skill prompt mysql-ddl-export
 
 # 直接执行内置功能
-./easy mysql ddl --host 127.0.0.1 --user root --database app
+./easy mysql ddl
 ```
 
 ## 安装 skill

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/bytedance/easy-cli/internal/projectroot"
 	"github.com/bytedance/easy-cli/internal/prompt"
 )
 
@@ -105,7 +106,7 @@ func InstallPath(name string, options InstallOptions) (string, error) {
 	}
 	root := homeDir
 	if !options.Global {
-		root = findProjectRoot(workingDir)
+		root = projectroot.Find(workingDir)
 	}
 	return filepath.Join(root, ".agents", "skills", name, "SKILL.md"), nil
 }
@@ -124,22 +125,4 @@ func validateName(name string) error {
 		return fmt.Errorf("%w: invalid name %q", ErrInvalidSkill, name)
 	}
 	return nil
-}
-
-func findProjectRoot(start string) string {
-	current, err := filepath.Abs(start)
-	if err != nil {
-		return start
-	}
-	original := current
-	for {
-		if _, err := os.Stat(filepath.Join(current, ".git")); err == nil {
-			return current
-		}
-		parent := filepath.Dir(current)
-		if parent == current {
-			return original
-		}
-		current = parent
-	}
 }

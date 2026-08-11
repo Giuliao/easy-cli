@@ -39,6 +39,10 @@
 
 - [easy CLI 配置层设计](./2026-08-11-config-layer-design.md)
 
+### `internal/projectroot`
+
+- [easy CLI 配置层设计](./2026-08-11-config-layer-design.md)
+
 ### `internal/prompt`
 
 - [easy CLI Skill 管理工具设计](./2026-08-06-easy-cli-skill-design.md)
@@ -120,6 +124,7 @@
 
 - `cmd/easy`
 - `internal/config`
+- `internal/projectroot`
 - `internal/cli`
 - `internal/mysql`
 - `skills/easy-cli`

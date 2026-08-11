@@ -11,21 +11,40 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytedance/easy-cli/internal/config"
 	"github.com/bytedance/easy-cli/internal/mysql"
 )
 
 const defaultMySQLPort = 3306
 const mySQLExportTimeout = 30 * time.Second
 
+type mysqlConnectionOverrides struct {
+	Host          string
+	HostSet       bool
+	Port          int
+	PortSet       bool
+	User          string
+	UserSet       bool
+	Password      string
+	PasswordSet   bool
+	PasswordStdin bool
+	Database      string
+	DatabaseSet   bool
+}
+
 func runMySQLDDL(args []string, options Options, out, errOut io.Writer) int {
-	connection, passwordStdin, help, err := parseMySQLDDLArgs(args)
+	if requestsMySQLHelp(args) {
+		printMySQLDDLHelp(out)
+		return 0
+	}
+	if options.ConfigErr != nil {
+		fmt.Fprintf(errOut, "mysql ddl: load configuration: %v\n", options.ConfigErr)
+		return 1
+	}
+	connection, passwordStdin, _, err := parseMySQLDDLArgs(args, options.Config.MySQL)
 	if err != nil {
 		fmt.Fprintf(errOut, "mysql ddl: %v\n", err)
 		return 2
-	}
-	if help {
-		printMySQLDDLHelp(out)
-		return 0
 	}
 	if passwordStdin {
 		input := options.In
@@ -54,14 +73,18 @@ func runMySQLDDL(args []string, options Options, out, errOut io.Writer) int {
 }
 
 func runMySQLQuery(args []string, options Options, out, errOut io.Writer) int {
-	connection, passwordStdin, statement, format, help, err := parseMySQLQueryArgs(args)
+	if requestsMySQLHelp(args) {
+		printMySQLQueryHelp(out)
+		return 0
+	}
+	if options.ConfigErr != nil {
+		fmt.Fprintf(errOut, "mysql query: load configuration: %v\n", options.ConfigErr)
+		return 1
+	}
+	connection, passwordStdin, statement, format, _, err := parseMySQLQueryArgs(args, options.Config.MySQL)
 	if err != nil {
 		fmt.Fprintf(errOut, "mysql query: %v\n", err)
 		return 2
-	}
-	if help {
-		printMySQLQueryHelp(out)
-		return 0
 	}
 	if passwordStdin {
 		input := options.In
@@ -92,128 +115,46 @@ func runMySQLQuery(args []string, options Options, out, errOut io.Writer) int {
 	return 0
 }
 
-func parseMySQLDDLArgs(args []string) (mysql.ConnectionOptions, bool, bool, error) {
-	options := mysql.ConnectionOptions{Port: defaultMySQLPort}
-	passwordSet := false
-	passwordStdin := false
+func parseMySQLDDLArgs(args []string, configured config.MySQL) (mysql.ConnectionOptions, bool, bool, error) {
+	var overrides mysqlConnectionOverrides
 	for i := 0; i < len(args); i++ {
-		switch args[i] {
-		case "--host":
-			value, next, err := requiredFlagValue(args, i, "--host")
-			if err != nil {
-				return mysql.ConnectionOptions{}, false, false, err
-			}
-			options.Host, i = value, next
-		case "--port":
-			value, next, err := requiredFlagValue(args, i, "--port")
-			if err != nil {
-				return mysql.ConnectionOptions{}, false, false, err
-			}
-			port, err := strconv.Atoi(value)
-			if err != nil || port < 1 || port > 65535 {
-				return mysql.ConnectionOptions{}, false, false, fmt.Errorf("--port must be between 1 and 65535")
-			}
-			options.Port, i = port, next
-		case "--user":
-			value, next, err := requiredFlagValue(args, i, "--user")
-			if err != nil {
-				return mysql.ConnectionOptions{}, false, false, err
-			}
-			options.User, i = value, next
-		case "--password":
-			if passwordStdin {
-				return mysql.ConnectionOptions{}, false, false, fmt.Errorf("--password and --password-stdin are mutually exclusive")
-			}
-			value, next, err := requiredFlagValue(args, i, "--password")
-			if err != nil {
-				return mysql.ConnectionOptions{}, false, false, err
-			}
-			options.Password, passwordSet, i = value, true, next
-		case "--password-stdin":
-			if passwordSet {
-				return mysql.ConnectionOptions{}, false, false, fmt.Errorf("--password and --password-stdin are mutually exclusive")
-			}
-			passwordSet = true
-			passwordStdin = true
-		case "--database":
-			value, next, err := requiredFlagValue(args, i, "--database")
-			if err != nil {
-				return mysql.ConnectionOptions{}, false, false, err
-			}
-			options.Database, i = value, next
-		case "--help", "-h":
+		if args[i] == "--help" || args[i] == "-h" {
 			return mysql.ConnectionOptions{}, false, true, nil
-		default:
+		}
+		matched, next, err := parseMySQLConnectionOption(args, i, &overrides)
+		if err != nil {
+			return mysql.ConnectionOptions{}, false, false, err
+		}
+		if !matched {
 			return mysql.ConnectionOptions{}, false, false, fmt.Errorf("unknown option %q", args[i])
 		}
+		i = next
 	}
-	if options.Host == "" {
-		return mysql.ConnectionOptions{}, false, false, fmt.Errorf("--host is required")
+	connection, err := resolveMySQLConnection(configured, overrides)
+	if err != nil {
+		return mysql.ConnectionOptions{}, false, false, err
 	}
-	if options.User == "" {
-		return mysql.ConnectionOptions{}, false, false, fmt.Errorf("--user is required")
-	}
-	if options.Database == "" {
-		return mysql.ConnectionOptions{}, false, false, fmt.Errorf("--database is required")
-	}
-	if !passwordSet {
-		return mysql.ConnectionOptions{}, false, false, fmt.Errorf("one of --password or --password-stdin is required")
-	}
-	return options, passwordStdin, false, nil
+	return connection, overrides.PasswordStdin, false, nil
 }
 
-func parseMySQLQueryArgs(args []string) (mysql.ConnectionOptions, bool, string, string, bool, error) {
-	options := mysql.ConnectionOptions{Port: defaultMySQLPort}
-	passwordSet := false
-	passwordStdin := false
+func parseMySQLQueryArgs(args []string, configured config.MySQL) (mysql.ConnectionOptions, bool, string, string, bool, error) {
+	var overrides mysqlConnectionOverrides
 	statement := ""
 	statementSet := false
 	format := "json"
 	for i := 0; i < len(args); i++ {
+		if args[i] == "--help" || args[i] == "-h" {
+			return mysql.ConnectionOptions{}, false, "", "", true, nil
+		}
+		matched, next, err := parseMySQLConnectionOption(args, i, &overrides)
+		if err != nil {
+			return mysql.ConnectionOptions{}, false, "", "", false, err
+		}
+		if matched {
+			i = next
+			continue
+		}
 		switch args[i] {
-		case "--host":
-			value, next, err := requiredFlagValue(args, i, "--host")
-			if err != nil {
-				return mysql.ConnectionOptions{}, false, "", "", false, err
-			}
-			options.Host, i = value, next
-		case "--port":
-			value, next, err := requiredFlagValue(args, i, "--port")
-			if err != nil {
-				return mysql.ConnectionOptions{}, false, "", "", false, err
-			}
-			port, err := strconv.Atoi(value)
-			if err != nil || port < 1 || port > 65535 {
-				return mysql.ConnectionOptions{}, false, "", "", false, fmt.Errorf("--port must be between 1 and 65535")
-			}
-			options.Port, i = port, next
-		case "--user":
-			value, next, err := requiredFlagValue(args, i, "--user")
-			if err != nil {
-				return mysql.ConnectionOptions{}, false, "", "", false, err
-			}
-			options.User, i = value, next
-		case "--password":
-			if passwordStdin {
-				return mysql.ConnectionOptions{}, false, "", "", false, fmt.Errorf("--password and --password-stdin are mutually exclusive")
-			}
-			value, next, err := requiredFlagValue(args, i, "--password")
-			if err != nil {
-				return mysql.ConnectionOptions{}, false, "", "", false, err
-			}
-			options.Password, passwordSet, i = value, true, next
-		case "--password-stdin":
-			if passwordSet {
-				return mysql.ConnectionOptions{}, false, "", "", false, fmt.Errorf("--password and --password-stdin are mutually exclusive")
-			}
-			passwordSet = true
-			passwordStdin = true
-		case "--database":
-			value, next, err := requiredFlagValue(args, i, "--database")
-			if err != nil {
-				return mysql.ConnectionOptions{}, false, "", "", false, err
-			}
-			options.Database, i = value, next
 		case "--sql":
 			if i+1 >= len(args) || args[i+1] == "" || args[i+1] == "--format" || args[i+1] == "--help" || args[i+1] == "-h" {
 				return mysql.ConnectionOptions{}, false, "", "", false, fmt.Errorf("--sql requires a non-empty value")
@@ -228,28 +169,132 @@ func parseMySQLQueryArgs(args []string) (mysql.ConnectionOptions, bool, string, 
 				return mysql.ConnectionOptions{}, false, "", "", false, fmt.Errorf("--format must be json or table")
 			}
 			format, i = value, next
-		case "--help", "-h":
-			return mysql.ConnectionOptions{}, false, "", "", true, nil
 		default:
 			return mysql.ConnectionOptions{}, false, "", "", false, fmt.Errorf("unknown option %q", args[i])
 		}
 	}
-	if options.Host == "" {
-		return mysql.ConnectionOptions{}, false, "", "", false, fmt.Errorf("--host is required")
-	}
-	if options.User == "" {
-		return mysql.ConnectionOptions{}, false, "", "", false, fmt.Errorf("--user is required")
-	}
-	if options.Database == "" {
-		return mysql.ConnectionOptions{}, false, "", "", false, fmt.Errorf("--database is required")
-	}
-	if !passwordSet {
-		return mysql.ConnectionOptions{}, false, "", "", false, fmt.Errorf("one of --password or --password-stdin is required")
-	}
 	if !statementSet {
 		return mysql.ConnectionOptions{}, false, "", "", false, fmt.Errorf("--sql is required")
 	}
-	return options, passwordStdin, statement, format, false, nil
+	connection, err := resolveMySQLConnection(configured, overrides)
+	if err != nil {
+		return mysql.ConnectionOptions{}, false, "", "", false, err
+	}
+	return connection, overrides.PasswordStdin, statement, format, false, nil
+}
+
+func parseMySQLConnectionOption(args []string, index int, overrides *mysqlConnectionOverrides) (bool, int, error) {
+	switch args[index] {
+	case "--host":
+		value, next, err := requiredFlagValue(args, index, "--host")
+		if err != nil {
+			return true, index, err
+		}
+		overrides.Host, overrides.HostSet = value, true
+		return true, next, nil
+	case "--port":
+		value, next, err := requiredFlagValue(args, index, "--port")
+		if err != nil {
+			return true, index, err
+		}
+		port, err := strconv.Atoi(value)
+		if err != nil || port < 1 || port > 65535 {
+			return true, index, fmt.Errorf("--port must be between 1 and 65535")
+		}
+		overrides.Port, overrides.PortSet = port, true
+		return true, next, nil
+	case "--user":
+		value, next, err := requiredFlagValue(args, index, "--user")
+		if err != nil {
+			return true, index, err
+		}
+		overrides.User, overrides.UserSet = value, true
+		return true, next, nil
+	case "--password":
+		if overrides.PasswordStdin {
+			return true, index, fmt.Errorf("--password and --password-stdin are mutually exclusive")
+		}
+		value, next, err := requiredFlagValue(args, index, "--password")
+		if err != nil {
+			return true, index, err
+		}
+		overrides.Password, overrides.PasswordSet = value, true
+		return true, next, nil
+	case "--password-stdin":
+		if overrides.PasswordSet {
+			return true, index, fmt.Errorf("--password and --password-stdin are mutually exclusive")
+		}
+		overrides.PasswordStdin = true
+		return true, index, nil
+	case "--database":
+		value, next, err := requiredFlagValue(args, index, "--database")
+		if err != nil {
+			return true, index, err
+		}
+		overrides.Database, overrides.DatabaseSet = value, true
+		return true, next, nil
+	default:
+		return false, index, nil
+	}
+}
+
+func resolveMySQLConnection(configured config.MySQL, overrides mysqlConnectionOverrides) (mysql.ConnectionOptions, error) {
+	connection := mysql.ConnectionOptions{
+		Host:     configured.Host,
+		Port:     configured.Port,
+		User:     configured.User,
+		Password: configured.Password,
+		Database: configured.Database,
+	}
+	if overrides.HostSet {
+		connection.Host = overrides.Host
+	}
+	if overrides.PortSet {
+		connection.Port = overrides.Port
+	}
+	if overrides.UserSet {
+		connection.User = overrides.User
+	}
+	if overrides.PasswordSet {
+		connection.Password = overrides.Password
+	}
+	if overrides.DatabaseSet {
+		connection.Database = overrides.Database
+	}
+	if connection.Port == 0 {
+		connection.Port = defaultMySQLPort
+	}
+	if connection.Host == "" {
+		return mysql.ConnectionOptions{}, fmt.Errorf("--host is required; set --host or mysql.host in configuration")
+	}
+	if connection.User == "" {
+		return mysql.ConnectionOptions{}, fmt.Errorf("--user is required; set --user or mysql.user in configuration")
+	}
+	if connection.Database == "" {
+		return mysql.ConnectionOptions{}, fmt.Errorf("--database is required; set --database or mysql.database in configuration")
+	}
+	if connection.Password == "" && !overrides.PasswordStdin {
+		return mysql.ConnectionOptions{}, fmt.Errorf("one of --password or --password-stdin is required; set mysql.password in configuration")
+	}
+	return connection, nil
+}
+
+func requestsMySQLHelp(args []string) bool {
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--help", "-h":
+			return true
+		case "--host", "--port", "--user", "--password", "--database", "--sql", "--format":
+			if i+1 >= len(args) {
+				return false
+			}
+			i++
+		case "--password-stdin":
+		default:
+			return false
+		}
+	}
+	return false
 }
 
 func requiredFlagValue(args []string, index int, flagName string) (string, int, error) {
@@ -273,15 +318,9 @@ func readPassword(input io.Reader) (string, error) {
 }
 
 func printMySQLDDLHelp(out io.Writer) {
-	fmt.Fprintln(out, "Usage: easy mysql ddl --host <host> --user <user> --database <database> [options]")
+	fmt.Fprintln(out, "Usage: easy mysql ddl [connection options]")
 	fmt.Fprintln(out)
-	fmt.Fprintln(out, "Options:")
-	fmt.Fprintln(out, "  --host <host>             MySQL host")
-	fmt.Fprintln(out, "  --port <port>             MySQL port (default: 3306)")
-	fmt.Fprintln(out, "  --user <user>             MySQL user")
-	fmt.Fprintln(out, "  --password <password>     MySQL password")
-	fmt.Fprintln(out, "  --password-stdin          Read password from stdin")
-	fmt.Fprintln(out, "  --database <database>     Database name")
+	printMySQLConnectionHelp(out)
 	fmt.Fprintln(out, "  -h, --help                Show this help")
 }
 
@@ -319,18 +358,23 @@ func formatMySQLQueryValue(value any) string {
 }
 
 func printMySQLQueryHelp(out io.Writer) {
-	fmt.Fprintln(out, "Usage: easy mysql query --host <host> --user <user> --database <database> --sql <statement> [options]")
+	fmt.Fprintln(out, "Usage: easy mysql query --sql <statement> [connection options]")
 	fmt.Fprintln(out)
-	fmt.Fprintln(out, "Options:")
-	fmt.Fprintln(out, "  --host <host>             MySQL host")
-	fmt.Fprintln(out, "  --port <port>             MySQL port (default: 3306)")
-	fmt.Fprintln(out, "  --user <user>             MySQL user")
-	fmt.Fprintln(out, "  --password <password>     MySQL password")
-	fmt.Fprintln(out, "  --password-stdin          Read password from stdin")
-	fmt.Fprintln(out, "  --database <database>     Database name")
+	printMySQLConnectionHelp(out)
 	fmt.Fprintln(out, "  --sql <statement>         SQL sent to MySQL without CLI filtering")
 	fmt.Fprintln(out, "  --format <format>         json or table (default: json)")
 	fmt.Fprintln(out, "  -h, --help                Show this help")
 	fmt.Fprintln(out)
+	fmt.Fprintln(out, "Connection defaults load from Home then project configuration; explicit flags override them.")
 	fmt.Fprintln(out, "Warning: SQL is executed as provided and may change database contents.")
+}
+
+func printMySQLConnectionHelp(out io.Writer) {
+	fmt.Fprintln(out, "Options:")
+	fmt.Fprintln(out, "  --host <host>             Override mysql.host in configuration")
+	fmt.Fprintln(out, "  --port <port>             Override mysql.port (default: 3306)")
+	fmt.Fprintln(out, "  --user <user>             Override mysql.user in configuration")
+	fmt.Fprintln(out, "  --password <password>     Override mysql.password in configuration")
+	fmt.Fprintln(out, "  --password-stdin          Read a password from stdin and override configuration")
+	fmt.Fprintln(out, "  --database <database>     Override mysql.database in configuration")
 }

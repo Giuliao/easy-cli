@@ -2,6 +2,18 @@
 
 本文件是项目级手工维护的双向索引，不属于单独 spec。
 
+## Domain -> Specs
+
+### `mysql`
+
+- [MySQL DDL 导出 CLI 设计](./2026-08-06-mysql-ddl-export-design.md)
+- [MySQL 数据查询 CLI 设计](./2026-08-11-mysql-query-design.md)
+
+### `easy-cli / skill`
+
+- [easy CLI Skill 管理工具设计](./2026-08-06-easy-cli-skill-design.md)
+- [easy-cli 聚合 Skill 与使用路由设计](./2026-08-10-easy-cli-aggregate-skill-design.md)
+
 ## Module -> Specs
 
 ### `cmd/easy`

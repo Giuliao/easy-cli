@@ -19,6 +19,7 @@ type Options struct {
 	Out         io.Writer
 	ErrOut      io.Writer
 	MySQLExport func(context.Context, mysql.ConnectionOptions) (string, error)
+	MySQLQuery  func(context.Context, mysql.ConnectionOptions, string) (mysql.QueryResult, error)
 }
 
 func Run(args []string, registry *skill.Registry, options Options) int {
@@ -32,6 +33,9 @@ func Run(args []string, registry *skill.Registry, options Options) int {
 	}
 	if len(args) >= 2 && args[0] == "mysql" && args[1] == "ddl" {
 		return runMySQLDDL(args[2:], options, out, errOut)
+	}
+	if len(args) >= 2 && args[0] == "mysql" && args[1] == "query" {
+		return runMySQLQuery(args[2:], options, out, errOut)
 	}
 	if len(args) == 0 || args[0] == "help" || args[0] == "--help" || args[0] == "-h" {
 		printHelp(out, registry)
@@ -80,6 +84,7 @@ func printHelp(out io.Writer, registry *skill.Registry) {
 	fmt.Fprintln(out, "  skill install <name>      Install a skill into the project or user scope.")
 	fmt.Fprintln(out, "  skill update <name>       Update an installed skill from the embedded source.")
 	fmt.Fprintln(out, "  mysql ddl                Export MySQL base-table CREATE TABLE DDL.")
+	fmt.Fprintln(out, "  mysql query              Execute SQL and output database rows.")
 	fprintln(out)
 	fmt.Fprintln(out, "Skills:")
 	for _, selected := range registry.List() {

@@ -49,9 +49,21 @@ The shorthand is equivalent to `easy skill prompt <skill-name>` and outputs the 
 | Read SMB development constraints | `easy skill prompt smb-work-order` | Load the local development and delivery rules |
 | Read MySQL DDL workflow | `easy skill prompt mysql-ddl-export` | Load connection, password, safety, and result-handling rules |
 | Export MySQL table DDL | `easy mysql ddl ...` | Execute the read-only DDL export |
+| Query MySQL data | `easy mysql query --sql <statement>` | Execute the supplied SQL and return JSON rows by default |
 | Inspect one skill | `easy skill show <skill-name>` | Read metadata and installation status |
 
 For MySQL DDL requests, first load `mysql-ddl-export` when its workflow is needed, then execute `easy mysql ddl` with the user-confirmed connection details. Do not treat reading a prompt as completing the database export.
+
+For MySQL data requests, execute `easy mysql query` with the confirmed connection details and the user's SQL:
+
+    easy mysql query \
+      --host "$MYSQL_HOST" \
+      --user "$MYSQL_USER" \
+      --password-stdin \
+      --database "$MYSQL_DATABASE" \
+      --sql "$MYSQL_SQL"
+
+The query command sends the SQL as provided and does not restrict it to SELECT or other read-only statements. Confirm the target database and the possible write effect before running it. Use `--format table` for terminal-oriented output; JSON is the default for Agent processing.
 
 Use password stdin when possible:
 

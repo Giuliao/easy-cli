@@ -328,7 +328,7 @@ func TestRunWithoutArgumentsPrintsHelp(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("Run() code = %d, want 0; stderr = %q", code, stderr.String())
 	}
-	want := "Usage: easy <command>\n\nDescription: Manage reusable AI skills and export MySQL table DDL.\n\nCommands:\n  skill list                List available skills and installation status.\n  skill show <name>         Show skill metadata and installation status.\n  skill prompt <name>       Output the skill's compressed, AI-readable prompt.\n  skill install <name>      Install a skill into the project or user scope.\n  skill update <name>       Update an installed skill from the embedded source.\n  mysql ddl                Export MySQL base-table CREATE TABLE DDL.\n\nSkills:\n  demo                      A demo skill.\n"
+	want := "Usage: easy <command>\n\nDescription: Manage reusable AI skills and export MySQL table DDL.\n\nCommands:\n  skill list                List available skills and installation status.\n  skill show <name>         Show skill metadata and installation status.\n  skill prompt <name>       Output the skill's compressed, AI-readable prompt.\n  skill install <name>      Install a skill into the project or user scope.\n  skill update <name>       Update an installed skill from the embedded source.\n  mysql ddl                Export MySQL base-table CREATE TABLE DDL.\n  mysql query              Execute SQL and output database rows.\n\nSkills:\n  demo                      A demo skill.\n"
 	if stdout.String() != want {
 		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}

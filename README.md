@@ -97,6 +97,33 @@ printf '%s\n' 'your-password' | ./easy mysql ddl \
 
 第一版不导出视图、触发器、存储过程、函数或数据。
 
+## 查询 MySQL 数据
+
+使用 `mysql query` 执行用户提供的 SQL，默认输出便于 Agent 处理的 JSON：
+
+```bash
+printf '%s\n' "$MYSQL_PASSWORD" | ./easy mysql query \
+  --host 127.0.0.1 \
+  --user root \
+  --password-stdin \
+  --database app \
+  --sql 'SELECT id, name FROM users LIMIT 20'
+```
+
+也可以使用制表符格式查看结果：
+
+```bash
+printf '%s\n' "$MYSQL_PASSWORD" | ./easy mysql query \
+  --host 127.0.0.1 \
+  --user root \
+  --password-stdin \
+  --database app \
+  --sql 'SELECT id, name FROM users LIMIT 20' \
+  --format table
+```
+
+该命令不会限制 SQL 语句类型，会将 SQL 原样提交给 MySQL；执行前请确认目标数据库和语句可能产生的写入影响。
+
 ## 开发
 
 ```bash

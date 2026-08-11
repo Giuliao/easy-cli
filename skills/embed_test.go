@@ -27,7 +27,7 @@ func TestEmbeddedSkillsLoadIntoRegistry(t *testing.T) {
 	if !ok {
 		t.Fatal("embedded skill easy-cli not found")
 	}
-	if !strings.Contains(master.Body, "easy skill prompt <skill-name>") || !strings.Contains(master.Body, "不要因为识别到某个 skill 就执行") {
+	if !strings.Contains(master.Body, "easy skill prompt <skill-name>") || !strings.Contains(master.Body, "不要因为识别到某个 skill 就执行") || !strings.Contains(master.Body, "easy mysql query") {
 		t.Fatalf("easy-cli body misses usage routing rule: %q", master.Body)
 	}
 	if err := fstest.TestFS(FS, "easy-cli/SKILL.md", "smb-work-order/SKILL.md", "mysql-ddl-export/SKILL.md"); err != nil {

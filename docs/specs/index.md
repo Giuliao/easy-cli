@@ -16,7 +16,7 @@
 
 ### `easy-cli / configuration`
 
-- [easy CLI 配置层设计](./2026-08-11-config-layer-design.md)
+- [easy CLI 配置与 Home 初始化设计](./2026-08-11-config-layer-design.md)
 
 ## Module -> Specs
 
@@ -25,7 +25,7 @@
 - [easy CLI Skill 管理工具设计](./2026-08-06-easy-cli-skill-design.md)
 - [easy-cli 聚合 Skill 与使用路由设计](./2026-08-10-easy-cli-aggregate-skill-design.md)
 - [MySQL 数据查询 CLI 设计](./2026-08-11-mysql-query-design.md)
-- [easy CLI 配置层设计](./2026-08-11-config-layer-design.md)
+- [easy CLI 配置与 Home 初始化设计](./2026-08-11-config-layer-design.md)
 
 ### `internal/cli`
 
@@ -33,15 +33,15 @@
 - [MySQL DDL 导出 CLI 设计](./2026-08-06-mysql-ddl-export-design.md)
 - [easy-cli 聚合 Skill 与使用路由设计](./2026-08-10-easy-cli-aggregate-skill-design.md)
 - [MySQL 数据查询 CLI 设计](./2026-08-11-mysql-query-design.md)
-- [easy CLI 配置层设计](./2026-08-11-config-layer-design.md)
+- [easy CLI 配置与 Home 初始化设计](./2026-08-11-config-layer-design.md)
 
 ### `internal/config`
 
-- [easy CLI 配置层设计](./2026-08-11-config-layer-design.md)
+- [easy CLI 配置与 Home 初始化设计](./2026-08-11-config-layer-design.md)
 
 ### `internal/projectroot`
 
-- [easy CLI 配置层设计](./2026-08-11-config-layer-design.md)
+- [easy CLI 配置与 Home 初始化设计](./2026-08-11-config-layer-design.md)
 
 ### `internal/prompt`
 
@@ -60,32 +60,32 @@
 
 - [easy-cli 聚合 Skill 与使用路由设计](./2026-08-10-easy-cli-aggregate-skill-design.md)
 - [MySQL 数据查询 CLI 设计](./2026-08-11-mysql-query-design.md)
-- [easy CLI 配置层设计](./2026-08-11-config-layer-design.md)
+- [easy CLI 配置与 Home 初始化设计](./2026-08-11-config-layer-design.md)
 
 ### `skills/mysql-ddl-export`
 
 - [easy-cli 聚合 Skill 与使用路由设计](./2026-08-10-easy-cli-aggregate-skill-design.md)
-- [easy CLI 配置层设计](./2026-08-11-config-layer-design.md)
+- [easy CLI 配置与 Home 初始化设计](./2026-08-11-config-layer-design.md)
 
 ### `skills/smb-work-order`
 
 - [easy CLI Skill 管理工具设计](./2026-08-06-easy-cli-skill-design.md)
 - [easy-cli 聚合 Skill 与使用路由设计](./2026-08-10-easy-cli-aggregate-skill-design.md)
-- [easy CLI 配置层设计](./2026-08-11-config-layer-design.md)
+- [easy CLI 配置与 Home 初始化设计](./2026-08-11-config-layer-design.md)
 
 ### `internal/mysql`
 
 - [MySQL DDL 导出 CLI 设计](./2026-08-06-mysql-ddl-export-design.md)
 - [MySQL 数据查询 CLI 设计](./2026-08-11-mysql-query-design.md)
-- [easy CLI 配置层设计](./2026-08-11-config-layer-design.md)
+- [easy CLI 配置与 Home 初始化设计](./2026-08-11-config-layer-design.md)
 
 ### `README.md`
 
-- [easy CLI 配置层设计](./2026-08-11-config-layer-design.md)
+- [easy CLI 配置与 Home 初始化设计](./2026-08-11-config-layer-design.md)
 
 ### `.gitignore`
 
-- [easy CLI 配置层设计](./2026-08-11-config-layer-design.md)
+- [easy CLI 配置与 Home 初始化设计](./2026-08-11-config-layer-design.md)
 
 ## Spec -> Modules
 
@@ -120,7 +120,7 @@
 - `internal/mysql`
 - `skills/easy-cli`
 
-### [easy CLI 配置层设计](./2026-08-11-config-layer-design.md)
+### [easy CLI 配置与 Home 初始化设计](./2026-08-11-config-layer-design.md)
 
 - `cmd/easy`
 - `internal/config`

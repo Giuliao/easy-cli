@@ -13,6 +13,7 @@
 
 - [easy CLI Skill 管理工具设计](./2026-08-06-easy-cli-skill-design.md)
 - [easy-cli 聚合 Skill 与使用路由设计](./2026-08-10-easy-cli-aggregate-skill-design.md)
+- [外置 Skill 注册与 easy-cli 聚合索引设计](./2026-08-14-external-skill-catalog-design.md)
 
 ### `easy-cli / configuration`
 
@@ -24,6 +25,7 @@
 
 - [easy CLI Skill 管理工具设计](./2026-08-06-easy-cli-skill-design.md)
 - [easy-cli 聚合 Skill 与使用路由设计](./2026-08-10-easy-cli-aggregate-skill-design.md)
+- [外置 Skill 注册与 easy-cli 聚合索引设计](./2026-08-14-external-skill-catalog-design.md)
 - [MySQL 数据查询 CLI 设计](./2026-08-11-mysql-query-design.md)
 - [easy CLI 配置与 Home 初始化设计](./2026-08-11-config-layer-design.md)
 
@@ -32,6 +34,7 @@
 - [easy CLI Skill 管理工具设计](./2026-08-06-easy-cli-skill-design.md)
 - [MySQL DDL 导出 CLI 设计](./2026-08-06-mysql-ddl-export-design.md)
 - [easy-cli 聚合 Skill 与使用路由设计](./2026-08-10-easy-cli-aggregate-skill-design.md)
+- [外置 Skill 注册与 easy-cli 聚合索引设计](./2026-08-14-external-skill-catalog-design.md)
 - [MySQL 数据查询 CLI 设计](./2026-08-11-mysql-query-design.md)
 - [easy CLI 配置与 Home 初始化设计](./2026-08-11-config-layer-design.md)
 
@@ -42,6 +45,7 @@
 ### `internal/projectroot`
 
 - [easy CLI 配置与 Home 初始化设计](./2026-08-11-config-layer-design.md)
+- [外置 Skill 注册与 easy-cli 聚合索引设计](./2026-08-14-external-skill-catalog-design.md)
 
 ### `internal/prompt`
 
@@ -51,14 +55,17 @@
 
 - [easy CLI Skill 管理工具设计](./2026-08-06-easy-cli-skill-design.md)
 - [easy-cli 聚合 Skill 与使用路由设计](./2026-08-10-easy-cli-aggregate-skill-design.md)
+- [外置 Skill 注册与 easy-cli 聚合索引设计](./2026-08-14-external-skill-catalog-design.md)
 
 ### `skills`
 
 - [easy-cli 聚合 Skill 与使用路由设计](./2026-08-10-easy-cli-aggregate-skill-design.md)
+- [外置 Skill 注册与 easy-cli 聚合索引设计](./2026-08-14-external-skill-catalog-design.md)
 
 ### `skills/easy-cli`
 
 - [easy-cli 聚合 Skill 与使用路由设计](./2026-08-10-easy-cli-aggregate-skill-design.md)
+- [外置 Skill 注册与 easy-cli 聚合索引设计](./2026-08-14-external-skill-catalog-design.md)
 - [MySQL 数据查询 CLI 设计](./2026-08-11-mysql-query-design.md)
 - [easy CLI 配置与 Home 初始化设计](./2026-08-11-config-layer-design.md)
 
@@ -82,6 +89,7 @@
 ### `README.md`
 
 - [easy CLI 配置与 Home 初始化设计](./2026-08-11-config-layer-design.md)
+- [外置 Skill 注册与 easy-cli 聚合索引设计](./2026-08-14-external-skill-catalog-design.md)
 
 ### `.gitignore`
 
@@ -112,6 +120,16 @@
 - `skills/easy-cli`
 - `skills/mysql-ddl-export`
 - `skills/smb-work-order`
+
+### [外置 Skill 注册与 easy-cli 聚合索引设计](./2026-08-14-external-skill-catalog-design.md)
+
+- `cmd/easy`
+- `internal/cli`
+- `internal/skill`
+- `internal/projectroot`
+- `skills`
+- `skills/easy-cli`
+- `README.md`
 
 ### [MySQL 数据查询 CLI 设计](./2026-08-11-mysql-query-design.md)
 

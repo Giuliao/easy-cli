@@ -101,7 +101,7 @@ func TestRunSkillListPrintsSortedNameAndDescription(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("Run() code = %d, want 0; stderr = %q", code, stderr.String())
 	}
-	want := "alpha\tAlpha.\tnot-installed\nzeta\tZeta.\tnot-installed\n"
+	want := "alpha  Alpha.                                                      not-installed\nzeta   Zeta.                                                       not-installed\n"
 	if stdout.String() != want {
 		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}
@@ -134,7 +134,7 @@ func TestRunSkillListShowsInstalledStatus(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("Run() code = %d, want 0; stderr = %q", code, stderr.String())
 	}
-	if stdout.String() != "demo\tA demo skill.\tinstalled\n" {
+	if stdout.String() != "demo  A demo skill.                                                installed\n" {
 		t.Fatalf("stdout = %q, want installed status", stdout.String())
 	}
 }
@@ -153,7 +153,7 @@ func TestRunSkillShowPrintsMetadata(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("Run() code = %d, want 0; stderr = %q", code, stderr.String())
 	}
-	want := "Name: demo\nDescription: A demo skill.\nStatus: not-installed\n"
+	want := "Name: demo\nDescription: A demo skill.\nOrigin: builtin\nSource: demo/SKILL.md\nStatus: not-installed\n"
 	if stdout.String() != want {
 		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}
@@ -186,7 +186,7 @@ func TestRunSkillShowIncludesInstallationStatus(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("Run() code = %d, want 0; stderr = %q", code, stderr.String())
 	}
-	want := "Name: demo\nDescription: A demo skill.\nStatus: installed\n"
+	want := "Name: demo\nDescription: A demo skill.\nOrigin: builtin\nSource: demo/SKILL.md\nStatus: installed\n"
 	if stdout.String() != want {
 		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}
@@ -330,7 +330,7 @@ func TestRunWithoutArgumentsPrintsHelp(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("Run() code = %d, want 0; stderr = %q", code, stderr.String())
 	}
-	want := "Usage: easy <command>\n\nDescription: Manage reusable AI skills and MySQL database access.\n\nCommands:\n  skill list                List available skills and installation status.\n  skill show <name>         Show skill metadata and installation status.\n  skill prompt <name>       Output the skill's compressed, AI-readable prompt.\n  skill install <name>      Install a skill into the project or user scope.\n  skill update <name>       Update an installed skill from the embedded source.\n  config init [--force]     Create the private Home configuration template.\n  config get <key>          Print an allowed non-sensitive configuration value.\n  mysql ddl                 Export MySQL base-table CREATE TABLE DDL.\n  mysql query               Execute SQL and output database rows.\n\nSkills:\n  demo                      A demo skill.\n"
+	want := "Usage: easy <command>\n\nDescription: Manage reusable AI skills and MySQL database access.\n\nCommands:\n  skill list             List available skills and installation status.\n  skill show <name>      Show skill metadata and installation status.\n  skill prompt <name>    Output the skill's compressed, AI-readable prompt.\n  skill install <name>   Install a skill into the project or user scope.\n  skill update <name>    Update an installed skill from the registered source.\n  config init [--force]  Create the private Home configuration template.\n  config get <key>       Print an allowed non-sensitive configuration value.\n  mysql ddl              Export MySQL base-table CREATE TABLE DDL.\n  mysql query            Execute SQL and output database rows.\n\nSkills:\n  demo  A demo skill.\n"
 	if stdout.String() != want {
 		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}
@@ -452,7 +452,7 @@ func TestRunSkillHelpPrintsCommandDescriptions(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("Run() code = %d, want 0; stderr = %q", code, stderr.String())
 	}
-	want := "Usage: easy skill <command>\n\nDescription: Manage reusable skills and reusable prompts.\n\nCommands:\n  list                     List available skills and installation status.\n  show <name>              Show skill metadata and installation status.\n  prompt <name>            Output the skill's compressed, AI-readable prompt.\n  install <name>           Install a skill into the project or user scope.\n  update <name>            Update an installed skill from the embedded source.\n"
+	want := "Usage: easy skill <command>\n\nDescription: Manage reusable skills and reusable prompts.\n\nCommands:\n  list            List available skills and installation status.\n  show <name>     Show skill metadata and installation status.\n  prompt <name>   Output the skill's compressed, AI-readable prompt.\n  install <name>  Install a skill into the project or user scope.\n  update <name>   Update an installed skill from the registered source.\n"
 	if stdout.String() != want {
 		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}

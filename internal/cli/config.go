@@ -88,8 +88,10 @@ func printConfigHelp(out io.Writer) {
 	fmt.Fprintln(out, "MySQL passwords are never available through config get.")
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "Commands:")
-	fmt.Fprintln(out, "  init [--force]            Create the private Home configuration template.")
-	fmt.Fprintln(out, "  get <key>                Print an allowed configuration value.")
+	printAlignedList(out, [][2]string{
+		{"init [--force]", "Create the private Home configuration template."},
+		{"get <key>", "Print an allowed configuration value."},
+	})
 }
 
 func printConfigInitHelp(out io.Writer) {

@@ -318,8 +318,10 @@ func readPassword(input io.Reader) (string, error) {
 func printMySQLDDLHelp(out io.Writer) {
 	fmt.Fprintln(out, "Usage: easy mysql ddl [connection options]")
 	fmt.Fprintln(out)
-	printMySQLConnectionHelp(out)
-	fmt.Fprintln(out, "  -h, --help                Show this help")
+	fmt.Fprintln(out, "Options:")
+	printAlignedList(out, append(mysqlConnectionOptions(),
+		[2]string{"-h, --help", "Show this help"},
+	))
 }
 
 func writeMySQLQueryResult(out io.Writer, result mysql.QueryResult, format string) error {
@@ -358,21 +360,24 @@ func formatMySQLQueryValue(value any) string {
 func printMySQLQueryHelp(out io.Writer) {
 	fmt.Fprintln(out, "Usage: easy mysql query --sql <statement> [connection options]")
 	fmt.Fprintln(out)
-	printMySQLConnectionHelp(out)
-	fmt.Fprintln(out, "  --sql <statement>         SQL sent to MySQL without CLI filtering")
-	fmt.Fprintln(out, "  --format <format>         json or table (default: json)")
-	fmt.Fprintln(out, "  -h, --help                Show this help")
+	fmt.Fprintln(out, "Options:")
+	printAlignedList(out, append(mysqlConnectionOptions(),
+		[2]string{"--sql <statement>", "SQL sent to MySQL without CLI filtering"},
+		[2]string{"--format <format>", "json or table (default: json)"},
+		[2]string{"-h, --help", "Show this help"},
+	))
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "Connection defaults load from Home then project configuration; explicit flags override them.")
 	fmt.Fprintln(out, "Warning: SQL is executed as provided and may change database contents.")
 }
 
-func printMySQLConnectionHelp(out io.Writer) {
-	fmt.Fprintln(out, "Options:")
-	fmt.Fprintln(out, "  --host <host>             Override mysql.host in configuration")
-	fmt.Fprintln(out, "  --port <port>             Override mysql.port (default: 3306)")
-	fmt.Fprintln(out, "  --user <user>             Override mysql.user in configuration")
-	fmt.Fprintln(out, "  --password <password>     Override mysql.password in configuration")
-	fmt.Fprintln(out, "  --password-stdin          Read a password from stdin and override configuration")
-	fmt.Fprintln(out, "  --database <database>     Override mysql.database in configuration")
+func mysqlConnectionOptions() [][2]string {
+	return [][2]string{
+		{"--host <host>", "Override mysql.host in configuration"},
+		{"--port <port>", "Override mysql.port (default: 3306)"},
+		{"--user <user>", "Override mysql.user in configuration"},
+		{"--password <password>", "Override mysql.password in configuration"},
+		{"--password-stdin", "Read a password from stdin and override configuration"},
+		{"--database <database>", "Override mysql.database in configuration"},
+	}
 }

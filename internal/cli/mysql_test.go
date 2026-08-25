@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -30,9 +31,10 @@ func TestRunMySQLDDLPassesConnectionOptionsToExporter(t *testing.T) {
 	}, registry, Options{
 		Out:    &stdout,
 		ErrOut: &stderr,
-		MySQLExport: func(_ context.Context, options mysql.ConnectionOptions) (string, error) {
+		MySQLExport: func(_ context.Context, options mysql.ConnectionOptions, out io.Writer) error {
 			got = options
-			return "CREATE TABLE `orders` (\n  `id` bigint NOT NULL\n);\n", nil
+			_, _ = io.WriteString(out, "CREATE TABLE `orders` (\n  `id` bigint NOT NULL\n);\n")
+			return nil
 		},
 	})
 
@@ -60,9 +62,9 @@ func TestRunMySQLDDLReadsPasswordFromStdin(t *testing.T) {
 	}, registry, Options{
 		In:  strings.NewReader("secret with spaces\n"),
 		Out: &stdout, ErrOut: &stderr,
-		MySQLExport: func(_ context.Context, options mysql.ConnectionOptions) (string, error) {
+		MySQLExport: func(_ context.Context, options mysql.ConnectionOptions, _ io.Writer) error {
 			password = options.Password
-			return "CREATE TABLE `orders` (\n);\n", nil
+			return nil
 		},
 	})
 
@@ -89,9 +91,9 @@ func TestRunMySQLDDLUsesConfiguredConnection(t *testing.T) {
 			Host: "configured.db.internal", Port: 3307, User: "configured-user", Password: "configured-password", Database: "configured-db",
 		}},
 		Out: &stdout, ErrOut: &stderr,
-		MySQLExport: func(_ context.Context, options mysql.ConnectionOptions) (string, error) {
+		MySQLExport: func(_ context.Context, options mysql.ConnectionOptions, _ io.Writer) error {
 			got = options
-			return "", nil
+			return nil
 		},
 	})
 
@@ -117,9 +119,9 @@ func TestRunMySQLDDLFlagsOverrideConfiguredConnection(t *testing.T) {
 			Host: "configured.db.internal", Port: 3307, User: "configured-user", Password: "configured-password", Database: "configured-db",
 		}},
 		Out: &stdout, ErrOut: &stderr,
-		MySQLExport: func(_ context.Context, options mysql.ConnectionOptions) (string, error) {
+		MySQLExport: func(_ context.Context, options mysql.ConnectionOptions, _ io.Writer) error {
 			got = options
-			return "", nil
+			return nil
 		},
 	})
 
@@ -172,9 +174,9 @@ func TestRunMySQLDDLRejectsConflictingPasswordFlags(t *testing.T) {
 		"--password", "secret", "--password-stdin", "--database", "orders",
 	}, registry, Options{
 		Out: &stdout, ErrOut: &stderr,
-		MySQLExport: func(context.Context, mysql.ConnectionOptions) (string, error) {
+		MySQLExport: func(context.Context, mysql.ConnectionOptions, io.Writer) error {
 			called = true
-			return "", nil
+			return nil
 		},
 	})
 
@@ -200,8 +202,8 @@ func TestRunMySQLDDLDoesNotLeakPasswordWhenExportFails(t *testing.T) {
 		"--password", "secret", "--database", "orders",
 	}, registry, Options{
 		Out: &stdout, ErrOut: &stderr,
-		MySQLExport: func(context.Context, mysql.ConnectionOptions) (string, error) {
-			return "", errors.New("access denied")
+		MySQLExport: func(context.Context, mysql.ConnectionOptions, io.Writer) error {
+			return errors.New("access denied")
 		},
 	})
 

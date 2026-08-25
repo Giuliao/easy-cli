@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io"
 	"net"
 	"strconv"
 
@@ -34,13 +35,13 @@ func Open(ctx context.Context, options ConnectionOptions) (*sql.DB, error) {
 	return db, nil
 }
 
-func ExportDDL(ctx context.Context, options ConnectionOptions) (string, error) {
+func ExportDDL(ctx context.Context, options ConnectionOptions, out io.Writer) error {
 	db, err := Open(ctx, options)
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer db.Close()
-	return Export(ctx, db)
+	return Export(ctx, db, out)
 }
 
 func buildDSN(options ConnectionOptions) (string, error) {

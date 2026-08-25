@@ -21,7 +21,7 @@ type Options struct {
 	In          io.Reader
 	Out         io.Writer
 	ErrOut      io.Writer
-	MySQLExport func(context.Context, mysql.ConnectionOptions) (string, error)
+	MySQLExport func(context.Context, mysql.ConnectionOptions, io.Writer) error
 	MySQLQuery  func(context.Context, mysql.ConnectionOptions, string) (mysql.QueryResult, error)
 }
 

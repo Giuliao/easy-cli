@@ -63,12 +63,10 @@ func runMySQLDDL(args []string, options Options, out, errOut io.Writer) int {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), mySQLExportTimeout)
 	defer cancel()
-	ddl, err := exporter(ctx, connection)
-	if err != nil {
+	if err := exporter(ctx, connection, out); err != nil {
 		fmt.Fprintf(errOut, "mysql ddl: export failed: %v\n", err)
 		return 1
 	}
-	_, _ = io.WriteString(out, ddl)
 	return 0
 }
 

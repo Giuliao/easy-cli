@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"bytes"
 	"context"
 	"regexp"
 	"testing"
@@ -14,6 +15,7 @@ func TestExportReturnsSortedCreateTableDefinitions(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
+	mock.MatchExpectationsInOrder(false)
 
 	mock.ExpectQuery(regexp.QuoteMeta("SHOW FULL TABLES WHERE Table_type = 'BASE TABLE'")).
 		WillReturnRows(sqlmock.NewRows([]string{"Tables_in_app", "Table_type"}).
@@ -27,12 +29,12 @@ func TestExportReturnsSortedCreateTableDefinitions(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"Table", "Create Table"}).
 			AddRow("zeta", "CREATE TABLE `zeta` (\n  `id` bigint NOT NULL\n) ENGINE=InnoDB;"))
 
-	got, err := Export(context.Background(), db)
-	if err != nil {
+	var buf bytes.Buffer
+	if err := Export(context.Background(), db, &buf); err != nil {
 		t.Fatalf("Export() error = %v", err)
 	}
 	want := "CREATE TABLE `alpha` (\n  `id` bigint NOT NULL\n) ENGINE=InnoDB;\n\nCREATE TABLE `zeta` (\n  `id` bigint NOT NULL\n) ENGINE=InnoDB;\n"
-	if got != want {
+	if got := buf.String(); got != want {
 		t.Fatalf("Export() = %q, want %q", got, want)
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
@@ -50,11 +52,11 @@ func TestExportReturnsEmptyForDatabaseWithoutBaseTables(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"Tables_in_app", "Table_type"}).
 			AddRow("view_only", "VIEW"))
 
-	got, err := Export(context.Background(), db)
-	if err != nil {
+	var buf bytes.Buffer
+	if err := Export(context.Background(), db, &buf); err != nil {
 		t.Fatalf("Export() error = %v", err)
 	}
-	if got != "" {
+	if got := buf.String(); got != "" {
 		t.Fatalf("Export() = %q, want empty output", got)
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
@@ -75,11 +77,11 @@ func TestExportQuotesBackticksInTableNames(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"Table", "Create Table"}).
 			AddRow("we`ird", "CREATE TABLE `we``ird` (\n  `id` int\n)"))
 
-	got, err := Export(context.Background(), db)
-	if err != nil {
+	var buf bytes.Buffer
+	if err := Export(context.Background(), db, &buf); err != nil {
 		t.Fatalf("Export() error = %v", err)
 	}
-	if got != "CREATE TABLE `we``ird` (\n  `id` int\n);\n" {
+	if got, want := buf.String(), "CREATE TABLE `we``ird` (\n  `id` int\n);\n"; got != want {
 		t.Fatalf("Export() = %q, want quoted identifier", got)
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {

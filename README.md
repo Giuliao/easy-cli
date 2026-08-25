@@ -61,6 +61,33 @@ cp .easy-cli/config.example.json .easy-cli/config.json
 
 SMB skill 会通过 `easy config get smb.*-repo` 获取仓库位置；未配置时会要求提供路径，而不会使用写死的个人目录。
 
+## 外置 skill
+
+easy 会自动发现两级本地 skill 目录：
+
+```text
+~/.config/easy-cli/skills/<name>/SKILL.md
+<project-root>/.easy-cli/skills/<name>/SKILL.md
+```
+
+项目级 skill 覆盖 Home 级同名 skill。发现后可直接使用：
+
+```bash
+./easy skill list
+./easy skill show <name>
+./easy skill prompt <name>
+./easy <name>
+```
+
+外置 skill 不会自动安装到 `.agents/skills`。只有显式执行 `easy skill install <name>` 才会安装。更新聚合入口时：
+
+```bash
+./easy skill install easy-cli
+./easy skill update easy-cli
+```
+
+`easy-cli` 只写入外置 skill 的名称、描述和按需加载命令，不复制外置 skill 正文；新增或修改外置 skill 后重新执行 `update easy-cli` 即可刷新已安装的聚合入口。
+
 ## 通过 easy-cli 使用其他 skill
 
 安装 `easy-cli` 聚合 skill 后，Agent 应把它作为能力路由和命令行用法说明：先选择并调用对应 skill，不要因为识别到 skill 就自动安装。只有用户明确要求管理 skill 时，才执行安装或更新命令。

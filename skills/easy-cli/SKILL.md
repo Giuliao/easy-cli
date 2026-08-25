@@ -54,6 +54,11 @@ The shorthand is equivalent to `easy skill prompt <skill-name>` and outputs the 
 | Read a configured value | `easy config get <key>` | Read one allowed non-sensitive Home/project configuration value |
 | Inspect one skill | `easy skill show <skill-name>` | Read metadata and installation status |
 
+easy also discovers skills from `~/.config/easy-cli/skills/<name>/SKILL.md` and the current project's `.easy-cli/skills/<name>/SKILL.md`. Project skills override Home skills with the same name. Read the catalog below to find external capabilities, then load only the selected skill with `easy skill prompt <name>`.
+
+<!-- EASY_EXTERNAL_SKILLS_START -->
+<!-- EASY_EXTERNAL_SKILLS_END -->
+
 ## Configuration
 
 easy loads `~/.config/easy-cli/config.json` first, then `<project-root>/.easy-cli/config.json`; fields in the project file override Home fields. Explicit MySQL flags override both configuration files. MySQL connection fields can therefore be omitted when they are already configured, but `mysql query --sql <statement>` remains required.
@@ -96,7 +101,7 @@ Use `--global` for the user-level installation or `--force` to overwrite a diffe
     easy skill install <skill-name> --global
     easy skill install <skill-name> --force
 
-Update an already installed skill from the version embedded in the current easy binary:
+Update an already installed skill from the version registered by the current easy binary and local skill directories:
 
     easy skill update <skill-name>
     easy skill update <skill-name> --global

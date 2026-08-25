@@ -21,9 +21,12 @@ func main() {
 }
 
 func run(args []string, out, errOut io.Writer, workingDir, homeDir string) int {
-	registry, err := skill.Load(skills.FS)
+	registry, err := skill.LoadAll(skills.FS, skill.DiscoveryOptions{
+		WorkingDir: workingDir,
+		HomeDir:    homeDir,
+	})
 	if err != nil {
-		fmt.Fprintf(errOut, "load embedded skills: %v\n", err)
+		fmt.Fprintf(errOut, "load skills: %v\n", err)
 		return 1
 	}
 	loadedConfig, configErr := config.Load(config.LoadOptions{WorkingDir: workingDir, HomeDir: homeDir})

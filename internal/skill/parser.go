@@ -8,11 +8,21 @@ import (
 
 var ErrInvalidSkill = errors.New("invalid skill")
 
+type Origin string
+
+const (
+	OriginBuiltin Origin = "builtin"
+	OriginHome    Origin = "home"
+	OriginProject Origin = "project"
+)
+
 type Skill struct {
 	Name        string
 	Description string
 	Source      string
 	Body        string
+	Origin      Origin
+	SourcePath  string
 }
 
 func Parse(source string) (Skill, error) {

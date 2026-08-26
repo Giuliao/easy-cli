@@ -18,6 +18,7 @@ coverage.html
 .env.local
 *.log
 *.tmp
+/log/
 
 # IDE and editor files
 .idea/

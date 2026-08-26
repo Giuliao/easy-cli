@@ -8,73 +8,32 @@ import (
 	"github.com/bytedance/easy-cli/internal/config"
 )
 
-func runConfig(args []string, options Options, out, errOut io.Writer) int {
-	if len(args) == 0 || (len(args) == 1 && (args[0] == "--help" || args[0] == "-h")) {
-		printConfigHelp(out)
-		return 0
-	}
-	switch args[0] {
-	case "init":
-		return runConfigInit(args[1:], options, out, errOut)
-	case "get":
-		return runConfigGet(args[1:], options, out, errOut)
-	default:
-		fmt.Fprintf(errOut, "unknown config command %q\n", args[0])
-		printConfigHelp(errOut)
-		return 2
-	}
-}
-
-func runConfigInit(args []string, options Options, out, errOut io.Writer) int {
-	force := false
-	for _, argument := range args {
-		switch argument {
-		case "--force":
-			if force {
-				fmt.Fprintln(errOut, "config init: --force may be specified only once")
-				return 2
-			}
-			force = true
-		case "--help", "-h":
-			printConfigInitHelp(out)
-			return 0
-		default:
-			fmt.Fprintf(errOut, "config init: unknown option %q\n", argument)
-			return 2
-		}
-	}
-	result, err := config.InitHome(config.InitOptions{HomeDir: options.HomeDir, Force: force})
+func (a *app) runConfigInit(force bool) error {
+	result, err := config.InitHome(config.InitOptions{HomeDir: a.options.HomeDir, Force: force})
 	if err != nil {
-		fmt.Fprintf(errOut, "config init: %v\n", err)
-		return 1
+		return a.fail(1, fmt.Errorf("config init: %w", err))
 	}
 	if force {
-		fmt.Fprintf(out, "Replaced configuration at %s\n", result.Path)
+		fmt.Fprintf(a.options.Out, "Replaced configuration at %s\n", result.Path)
 	} else {
-		fmt.Fprintf(out, "Initialized configuration at %s\n", result.Path)
+		fmt.Fprintf(a.options.Out, "Initialized configuration at %s\n", result.Path)
 	}
-	return 0
+	return nil
 }
 
-func runConfigGet(args []string, options Options, out, errOut io.Writer) int {
-	if len(args) != 1 {
-		fmt.Fprintln(errOut, "usage: easy config get <key>")
-		return 2
+func (a *app) runConfigGet(key string) error {
+	if a.options.ConfigErr != nil {
+		return a.fail(1, fmt.Errorf("config: load configuration: %w", a.options.ConfigErr))
 	}
-	if options.ConfigErr != nil {
-		fmt.Fprintf(errOut, "config: load configuration: %v\n", options.ConfigErr)
-		return 1
-	}
-	value, err := options.Config.Get(args[0])
+	value, err := a.options.Config.Get(key)
 	if err != nil {
-		fmt.Fprintf(errOut, "config get: %v\n", err)
 		if errors.Is(err, config.ErrKeyUnavailable) {
-			return 2
+			return a.fail(2, fmt.Errorf("config get: %w", err))
 		}
-		return 1
+		return a.fail(1, fmt.Errorf("config get: %w", err))
 	}
-	fmt.Fprintln(out, value)
-	return 0
+	fmt.Fprintln(a.options.Out, value)
+	return nil
 }
 
 func printConfigHelp(out io.Writer) {

@@ -16,7 +16,7 @@ func TestRunUsesEmbeddedSkillRegistry(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("run() code = %d, want 0; stderr = %q", code, stderr.String())
 	}
-	if !strings.Contains(stdout.String(), "smb-work-order") {
+	if !strings.Contains(stdout.String(), "mysql-ddl-export") {
 		t.Fatalf("stdout = %q, want embedded skill name", stdout.String())
 	}
 }
@@ -27,16 +27,16 @@ func TestRunLoadsProjectConfigurationOverHome(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(project, ".git"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	writeMainConfig(t, filepath.Join(home, ".config", "easy-cli", "config.json"), `{"smb":{"backend_repo":"/home/backend"}}`)
-	writeMainConfig(t, filepath.Join(project, ".easy-cli", "config.json"), `{"smb":{"backend_repo":"/project/backend"}}`)
+	writeMainConfig(t, filepath.Join(home, ".config", "easy-cli", "config.json"), `{"mysql":{"host":"home.db.internal"}}`)
+	writeMainConfig(t, filepath.Join(project, ".easy-cli", "config.json"), `{"mysql":{"host":"project.db.internal"}}`)
 
 	var stdout, stderr bytes.Buffer
-	code := run([]string{"config", "get", "smb.backend-repo"}, &stdout, &stderr, project, home)
+	code := run([]string{"config", "get", "mysql.host"}, &stdout, &stderr, project, home)
 
 	if code != 0 {
 		t.Fatalf("run() code = %d, want 0; stderr = %q", code, stderr.String())
 	}
-	if stdout.String() != "/project/backend\n" {
+	if stdout.String() != "project.db.internal\n" {
 		t.Fatalf("stdout = %q, want project configuration value", stdout.String())
 	}
 }

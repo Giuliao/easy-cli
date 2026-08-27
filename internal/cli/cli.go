@@ -9,10 +9,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bytedance/easy-cli/internal/config"
-	"github.com/bytedance/easy-cli/internal/mysql"
-	"github.com/bytedance/easy-cli/internal/prompt"
-	"github.com/bytedance/easy-cli/internal/skill"
+	"github.com/Giuliao/easy-cli/internal/config"
+	"github.com/Giuliao/easy-cli/internal/mysql"
+	"github.com/Giuliao/easy-cli/internal/prompt"
+	"github.com/Giuliao/easy-cli/internal/skill"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
@@ -28,6 +28,9 @@ type Options struct {
 	MySQLExport func(context.Context, mysql.ConnectionOptions, io.Writer) error
 	MySQLQuery  func(context.Context, mysql.ConnectionOptions, string) (mysql.QueryResult, error)
 }
+
+// Version is set at build time via -ldflags.
+var Version = "dev"
 
 type app struct {
 	registry *skill.Registry
@@ -95,10 +98,15 @@ func (a *app) buildRootCmd() *cobra.Command {
 		Use:   "easy",
 		Short: "Manage reusable AI skills and MySQL database access.",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if v, _ := cmd.Flags().GetBool("version"); v {
+				fmt.Fprintln(out, Version)
+				return nil
+			}
 			a.printRootHelp(out)
 			return nil
 		},
 	}
+	rootCmd.Flags().Bool("version", false, "print version and exit")
 	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		a.printRootHelp(out)
 	})

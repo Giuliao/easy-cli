@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/bytedance/easy-cli/internal/projectroot"
+	"github.com/Giuliao/easy-cli/internal/projectroot"
 )
 
 type Registry struct {

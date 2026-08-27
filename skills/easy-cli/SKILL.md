@@ -65,9 +65,9 @@ easy loads `~/.config/easy-cli/config.json` first, then `<project-root>/.easy-cl
 
 Only when the user explicitly asks to create or reset Home configuration, run `easy config init`; it creates a private template and refuses to overwrite an existing file unless the user explicitly requests `easy config init --force`. Do not initialize configuration merely because a value is missing.
 
-Use `easy config get <key>` only for allowed non-sensitive values, especially SMB repository paths. `mysql.password` is intentionally unavailable from this command. Do not print or request a configured password merely to inspect configuration.
+Use `easy config get <key>` only for allowed non-sensitive values. `mysql.password` is intentionally unavailable from this command. Do not print or request a configured password merely to inspect configuration.
 
-For SMB work-order tasks, load `smb-work-order` first, then resolve only the repository needed for the request with `easy config get smb.backend-repo`, `easy config get smb.frontend-repo`, or `easy config get smb.idl-repo`.
+For SMB work-order tasks, load `smb-work-order` first and follow its repository resolution instructions.
 
 For MySQL DDL requests, first load `mysql-ddl-export` when its workflow is needed, then execute `easy mysql ddl` with the user-confirmed connection details or configured defaults. Do not treat reading a prompt as completing the database export.
 

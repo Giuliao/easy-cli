@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bytedance/easy-cli/internal/config"
-	"github.com/bytedance/easy-cli/internal/mysql"
+	"github.com/Giuliao/easy-cli/internal/config"
+	"github.com/Giuliao/easy-cli/internal/mysql"
 	"github.com/spf13/cobra"
 )
 

@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/bytedance/easy-cli/internal/projectroot"
-	"github.com/bytedance/easy-cli/internal/prompt"
+	"github.com/Giuliao/easy-cli/internal/projectroot"
+	"github.com/Giuliao/easy-cli/internal/prompt"
 )
 
 type InstallOptions struct {

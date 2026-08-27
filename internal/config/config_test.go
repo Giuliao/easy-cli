@@ -25,20 +25,12 @@ func TestLoadMergesProjectConfigOverHomeByField(t *testing.T) {
     "user": "home-user",
     "password": "home-password",
     "database": "home-db"
-  },
-  "smb": {
-    "backend_repo": "/home/backend",
-    "frontend_repo": "/home/frontend",
-    "idl_repo": "/home/idl"
   }
 }`)
 	writeConfigFile(t, filepath.Join(project, ".easy-cli", "config.json"), `{
   "mysql": {
     "host": "project.db.internal",
     "database": "project-db"
-  },
-  "smb": {
-    "backend_repo": "/project/backend"
   }
 }`)
 
@@ -48,9 +40,6 @@ func TestLoadMergesProjectConfigOverHomeByField(t *testing.T) {
 	}
 	if got.MySQL.Host != "project.db.internal" || got.MySQL.Port != 3306 || got.MySQL.User != "home-user" || got.MySQL.Password != "home-password" || got.MySQL.Database != "project-db" {
 		t.Fatalf("MySQL = %+v, want field-level merge", got.MySQL)
-	}
-	if got.SMB.BackendRepo != "/project/backend" || got.SMB.FrontendRepo != "/home/frontend" || got.SMB.IDLRepo != "/home/idl" {
-		t.Fatalf("SMB = %+v, want field-level merge", got.SMB)
 	}
 }
 
@@ -97,15 +86,14 @@ func TestLoadRejectsInvalidOrUnknownConfigWithoutLeakingPassword(t *testing.T) {
 func TestGetReturnsOnlyAllowedNonSensitiveValues(t *testing.T) {
 	config := Config{
 		MySQL: MySQL{Host: "db.internal", Port: 3307, User: "app", Password: "secret-value", Database: "orders"},
-		SMB:   SMB{BackendRepo: "/code/backend", FrontendRepo: "/code/frontend", IDLRepo: "/code/idl"},
 	}
 
-	got, err := config.Get("smb.backend-repo")
+	got, err := config.Get("mysql.host")
 	if err != nil {
 		t.Fatalf("Get() error = %v", err)
 	}
-	if got != "/code/backend" {
-		t.Fatalf("Get() = %q, want backend repo", got)
+	if got != "db.internal" {
+		t.Fatalf("Get() = %q, want host", got)
 	}
 
 	_, err = config.Get("mysql.password")
@@ -118,7 +106,7 @@ func TestGetReturnsOnlyAllowedNonSensitiveValues(t *testing.T) {
 }
 
 func TestGetRejectsUnsetValue(t *testing.T) {
-	_, err := (Config{}).Get("smb.idl-repo")
+	_, err := (Config{}).Get("mysql.host")
 	if err == nil {
 		t.Fatal("Get() error = nil, want unset-value error")
 	}

@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/bytedance/easy-cli/internal/projectroot"
+	"github.com/Giuliao/easy-cli/internal/projectroot"
 )
 
 const (
@@ -30,11 +30,6 @@ const homeConfigTemplate = `{
     "user": "",
     "password": "",
     "database": ""
-  },
-  "smb": {
-    "backend_repo": "",
-    "frontend_repo": "",
-    "idl_repo": ""
   }
 }
 `
@@ -56,7 +51,6 @@ type InitResult struct {
 
 type Config struct {
 	MySQL MySQL
-	SMB   SMB
 }
 
 type MySQL struct {
@@ -67,15 +61,8 @@ type MySQL struct {
 	Database string
 }
 
-type SMB struct {
-	BackendRepo  string
-	FrontendRepo string
-	IDLRepo      string
-}
-
 type source struct {
 	MySQL *mySQLSource `json:"mysql"`
-	SMB   *smbSource   `json:"smb"`
 }
 
 type mySQLSource struct {
@@ -84,12 +71,6 @@ type mySQLSource struct {
 	User     *string `json:"user"`
 	Password *string `json:"password"`
 	Database *string `json:"database"`
-}
-
-type smbSource struct {
-	BackendRepo  *string `json:"backend_repo"`
-	FrontendRepo *string `json:"frontend_repo"`
-	IDLRepo      *string `json:"idl_repo"`
 }
 
 func Load(options LoadOptions) (Config, error) {
@@ -268,17 +249,6 @@ func (c *Config) apply(source source) {
 			c.MySQL.Database = *source.MySQL.Database
 		}
 	}
-	if source.SMB != nil {
-		if source.SMB.BackendRepo != nil {
-			c.SMB.BackendRepo = *source.SMB.BackendRepo
-		}
-		if source.SMB.FrontendRepo != nil {
-			c.SMB.FrontendRepo = *source.SMB.FrontendRepo
-		}
-		if source.SMB.IDLRepo != nil {
-			c.SMB.IDLRepo = *source.SMB.IDLRepo
-		}
-	}
 }
 
 func (c Config) Get(key string) (string, error) {
@@ -294,12 +264,6 @@ func (c Config) Get(key string) (string, error) {
 		value = c.MySQL.User
 	case "mysql.database":
 		value = c.MySQL.Database
-	case "smb.backend-repo":
-		value = c.SMB.BackendRepo
-	case "smb.frontend-repo":
-		value = c.SMB.FrontendRepo
-	case "smb.idl-repo":
-		value = c.SMB.IDLRepo
 	default:
 		return "", fmt.Errorf("%w: %q", ErrKeyUnavailable, key)
 	}

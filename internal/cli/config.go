@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/bytedance/easy-cli/internal/config"
+	"github.com/Giuliao/easy-cli/internal/config"
 )
 
 func (a *app) runConfigInit(force bool) error {

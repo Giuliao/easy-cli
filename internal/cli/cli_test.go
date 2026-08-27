@@ -10,8 +10,8 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/bytedance/easy-cli/internal/config"
-	"github.com/bytedance/easy-cli/internal/skill"
+	"github.com/Giuliao/easy-cli/internal/config"
+	"github.com/Giuliao/easy-cli/internal/skill"
 )
 
 func TestRunPromptWritesOnlyCompressedPromptToStdout(t *testing.T) {
@@ -342,8 +342,8 @@ func TestRunConfigGetPrintsAllowedMergedValue(t *testing.T) {
 		t.Fatal(err)
 	}
 	var stdout, stderr bytes.Buffer
-	code := Run([]string{"config", "get", "smb.backend-repo"}, registry, Options{
-		Config: config.Config{SMB: config.SMB{BackendRepo: "/code/smb-backend"}},
+	code := Run([]string{"config", "get", "mysql.host"}, registry, Options{
+		Config: config.Config{MySQL: config.MySQL{Host: "db.internal"}},
 		Out:    &stdout,
 		ErrOut: &stderr,
 	})
@@ -351,7 +351,7 @@ func TestRunConfigGetPrintsAllowedMergedValue(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("Run() code = %d, want 0; stderr = %q", code, stderr.String())
 	}
-	if stdout.String() != "/code/smb-backend\n" {
+	if stdout.String() != "db.internal\n" {
 		t.Fatalf("stdout = %q, want config value", stdout.String())
 	}
 }

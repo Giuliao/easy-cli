@@ -5,10 +5,10 @@ import (
 	"io"
 	"os"
 
-	"github.com/bytedance/easy-cli/internal/cli"
-	"github.com/bytedance/easy-cli/internal/config"
-	"github.com/bytedance/easy-cli/internal/skill"
-	"github.com/bytedance/easy-cli/skills"
+	"github.com/Giuliao/easy-cli/internal/cli"
+	"github.com/Giuliao/easy-cli/internal/config"
+	"github.com/Giuliao/easy-cli/internal/skill"
+	"github.com/Giuliao/easy-cli/skills"
 )
 
 func main() {

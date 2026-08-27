@@ -2,6 +2,28 @@
 
 基于 Go 的 skill/prompt CLI 工具：把开发约束维护在代码仓库中，经过本地结构压缩后输出，或安装为 Codex 可识别的 skill。
 
+## 安装
+
+一键安装（macOS / Linux）：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Giuliao/easy-cli/main/install.sh | sh
+```
+
+脚本会自动识别操作系统和架构，从 GitHub Releases 下载对应二进制并校验 SHA-256。默认安装到 `~/.local/bin/easy`（root 用户安装到 `/usr/local/bin/easy`）。
+
+可通过环境变量自定义：
+
+```bash
+# 安装到指定目录
+EASY_INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/Giuliao/easy-cli/main/install.sh | sh
+
+# 安装指定版本
+EASY_VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/Giuliao/easy-cli/main/install.sh | sh
+```
+
+也可以直接从 [Releases](https://github.com/Giuliao/easy-cli/releases) 下载对应平台的二进制。
+
 ## 构建
 
 ```bash

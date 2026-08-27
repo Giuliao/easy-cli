@@ -1,4 +1,4 @@
-module github.com/bytedance/easy-cli
+module github.com/Giuliao/easy-cli
 
 go 1.26
 

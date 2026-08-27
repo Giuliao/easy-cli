@@ -9,9 +9,9 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/bytedance/easy-cli/internal/config"
-	"github.com/bytedance/easy-cli/internal/mysql"
-	"github.com/bytedance/easy-cli/internal/skill"
+	"github.com/Giuliao/easy-cli/internal/config"
+	"github.com/Giuliao/easy-cli/internal/mysql"
+	"github.com/Giuliao/easy-cli/internal/skill"
 )
 
 func TestRunMySQLDDLPassesConnectionOptionsToExporter(t *testing.T) {

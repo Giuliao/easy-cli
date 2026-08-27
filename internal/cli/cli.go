@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Giuliao/easy-cli/internal/config"
 	"github.com/Giuliao/easy-cli/internal/mysql"
@@ -97,10 +99,13 @@ func autoRefreshEasyCLI(registry *skill.Registry, options Options) {
 	if !ok {
 		return
 	}
-	rendered, err := skill.RenderAggregate(easyCLI, registry)
-	if err != nil {
-		return
+
+	type installTarget struct {
+		path    string
+		global  bool
+		modTime time.Time
 	}
+	var targets []installTarget
 	for _, global := range []bool{false, true} {
 		installPath, err := skill.InstallPath("easy-cli", skill.InstallOptions{
 			WorkingDir: options.WorkingDir,
@@ -110,15 +115,106 @@ func autoRefreshEasyCLI(registry *skill.Registry, options Options) {
 		if err != nil {
 			continue
 		}
-		if _, statErr := os.Stat(installPath); statErr != nil {
+		info, statErr := os.Stat(installPath)
+		if statErr != nil {
 			continue
 		}
-		_, _ = skill.Update(rendered, skill.InstallOptions{
+		targets = append(targets, installTarget{path: installPath, global: global, modTime: info.ModTime()})
+	}
+	if len(targets) == 0 {
+		return
+	}
+
+	external := registry.External()
+	externalNames := make([]string, 0, len(external))
+	var latestExternalMod time.Time
+	for _, s := range external {
+		externalNames = append(externalNames, s.Name)
+		info, err := os.Stat(s.SourcePath)
+		if err != nil {
+			continue
+		}
+		if info.ModTime().After(latestExternalMod) {
+			latestExternalMod = info.ModTime()
+		}
+	}
+	sort.Strings(externalNames)
+	externalFingerprint := strings.Join(externalNames, "\n")
+
+	needsUpdate := false
+	for _, target := range targets {
+		installedNames, err := extractExternalSkillNames(target.path)
+		if err != nil || installedNames != externalFingerprint {
+			needsUpdate = true
+			break
+		}
+		if latestExternalMod.After(target.modTime) {
+			needsUpdate = true
+			break
+		}
+	}
+	if !needsUpdate {
+		return
+	}
+
+	rendered, err := skill.RenderAggregate(easyCLI, registry)
+	if err != nil {
+		return
+	}
+	compressed, err := prompt.Compress(rendered.Source)
+	if err != nil {
+		return
+	}
+	now := time.Now()
+	for _, target := range targets {
+		installedNames, err := extractExternalSkillNames(target.path)
+		if err == nil && installedNames == externalFingerprint && !latestExternalMod.After(target.modTime) {
+			continue
+		}
+		result, err := skill.UpdateCompressed("easy-cli", compressed, skill.InstallOptions{
 			WorkingDir: options.WorkingDir,
 			HomeDir:    options.HomeDir,
-			Global:     global,
+			Global:     target.global,
 		})
+		if err != nil {
+			continue
+		}
+		if !result.Changed {
+			_ = os.Chtimes(target.path, now, latestExternalMod)
+		}
 	}
+}
+
+func extractExternalSkillNames(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	content := string(data)
+	start := strings.Index(content, skill.ExternalSkillsStart)
+	if start < 0 {
+		return "", fmt.Errorf("missing start marker")
+	}
+	rest := content[start+len(skill.ExternalSkillsStart):]
+	end := strings.Index(rest, skill.ExternalSkillsEnd)
+	if end < 0 {
+		return "", fmt.Errorf("missing end marker")
+	}
+	section := rest[:end]
+	var names []string
+	for _, line := range strings.Split(section, "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, "- `") {
+			continue
+		}
+		backtick := strings.Index(line[3:], "`")
+		if backtick < 0 {
+			continue
+		}
+		names = append(names, line[3:3+backtick])
+	}
+	sort.Strings(names)
+	return strings.Join(names, "\n"), nil
 }
 
 func (a *app) buildRootCmd() *cobra.Command {

@@ -30,17 +30,29 @@ func Update(skill Skill, options InstallOptions) (InstallResult, error) {
 	return write(skill, options, true)
 }
 
+// UpdateCompressed updates an existing installation with pre-compressed content.
+// It is intended for callers that already have the compressed payload and want
+// to avoid re-compressing during the refresh path.
+func UpdateCompressed(name string, content string, options InstallOptions) (InstallResult, error) {
+	options.Force = true
+	return writeContent(name, content, options, true)
+}
+
 func write(selected Skill, options InstallOptions, requireExisting bool) (InstallResult, error) {
-	targetPath, err := InstallPath(selected.Name, options)
+	content, err := prompt.Compress(selected.Source)
+	if err != nil {
+		return InstallResult{}, fmt.Errorf("compress skill %q: %w", selected.Name, err)
+	}
+	return writeContent(selected.Name, content, options, requireExisting)
+}
+
+func writeContent(name string, content string, options InstallOptions, requireExisting bool) (InstallResult, error) {
+	targetPath, err := InstallPath(name, options)
 	if err != nil {
 		return InstallResult{}, err
 	}
 	targetDir := filepath.Dir(targetPath)
 
-	content, err := prompt.Compress(selected.Source)
-	if err != nil {
-		return InstallResult{}, fmt.Errorf("compress skill %q: %w", selected.Name, err)
-	}
 	if existing, readErr := os.ReadFile(targetPath); readErr == nil {
 		if string(existing) == content {
 			return InstallResult{Path: targetPath}, nil
@@ -51,7 +63,7 @@ func write(selected Skill, options InstallOptions, requireExisting bool) (Instal
 	} else if !os.IsNotExist(readErr) {
 		return InstallResult{}, fmt.Errorf("read target %s: %w", targetPath, readErr)
 	} else if requireExisting {
-		return InstallResult{}, fmt.Errorf("skill %q is not installed at %s; run easy skill install %s first", selected.Name, targetPath, selected.Name)
+		return InstallResult{}, fmt.Errorf("skill %q is not installed at %s; run easy skill install %s first", name, targetPath, name)
 	}
 
 	if err := os.MkdirAll(targetDir, 0o755); err != nil {

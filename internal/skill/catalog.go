@@ -6,8 +6,13 @@ import (
 )
 
 const (
-	externalSkillsStart = "<!-- EASY_EXTERNAL_SKILLS_START -->"
-	externalSkillsEnd   = "<!-- EASY_EXTERNAL_SKILLS_END -->"
+	ExternalSkillsStart = "<!-- EASY_EXTERNAL_SKILLS_START -->"
+	ExternalSkillsEnd   = "<!-- EASY_EXTERNAL_SKILLS_END -->"
+)
+
+const (
+	externalSkillsStart = ExternalSkillsStart
+	externalSkillsEnd   = ExternalSkillsEnd
 )
 
 func RenderAggregate(selected Skill, registry *Registry) (Skill, error) {

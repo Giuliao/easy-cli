@@ -105,6 +105,16 @@ func (r *Registry) loadExternal(root string, origin Origin) error {
 		}
 		directory := filepath.Join(absoluteRoot, entry.Name())
 		filePath := filepath.Join(directory, "SKILL.md")
+		info, err := os.Stat(filePath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return fmt.Errorf("stat external skill %s: %w", filePath, err)
+		}
+		if !info.Mode().IsRegular() {
+			continue
+		}
 		content, err := os.ReadFile(filePath)
 		if err != nil {
 			return fmt.Errorf("read external skill %s: %w", filePath, err)

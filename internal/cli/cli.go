@@ -74,6 +74,7 @@ func Run(args []string, registry *skill.Registry, options Options) int {
 	if options.ErrOut == nil {
 		options.ErrOut = io.Discard
 	}
+	autoRefreshEasyCLI(registry, options)
 	a := &app{registry: registry, options: options}
 	rootCmd := a.buildRootCmd()
 	rootCmd.SetArgs(args)
@@ -89,6 +90,35 @@ func Run(args []string, registry *skill.Registry, options Options) int {
 		}
 	}
 	return a.exitCode
+}
+
+func autoRefreshEasyCLI(registry *skill.Registry, options Options) {
+	easyCLI, ok := registry.Get("easy-cli")
+	if !ok {
+		return
+	}
+	rendered, err := skill.RenderAggregate(easyCLI, registry)
+	if err != nil {
+		return
+	}
+	for _, global := range []bool{false, true} {
+		installPath, err := skill.InstallPath("easy-cli", skill.InstallOptions{
+			WorkingDir: options.WorkingDir,
+			HomeDir:    options.HomeDir,
+			Global:     global,
+		})
+		if err != nil {
+			continue
+		}
+		if _, statErr := os.Stat(installPath); statErr != nil {
+			continue
+		}
+		_, _ = skill.Update(rendered, skill.InstallOptions{
+			WorkingDir: options.WorkingDir,
+			HomeDir:    options.HomeDir,
+			Global:     global,
+		})
+	}
 }
 
 func (a *app) buildRootCmd() *cobra.Command {

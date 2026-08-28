@@ -12,6 +12,7 @@ coverage.html
 
 # Local easy CLI configuration (may contain credentials)
 /.easy-cli/config.json
+/.easy-cli/context
 
 # Local environment and logs
 .env

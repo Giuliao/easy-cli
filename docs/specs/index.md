@@ -19,6 +19,10 @@
 
 - [easy CLI 配置与 Home 初始化设计](./2026-08-11-config-layer-design.md)
 
+### `easy-cli / project`
+
+- [Project 与 Task 管理 CLI 设计](./2026-08-28-project-management-design.md)
+
 ## Module -> Specs
 
 ### `cmd/easy`
@@ -28,6 +32,7 @@
 - [外置 Skill 注册与 easy-cli 聚合索引设计](./2026-08-14-external-skill-catalog-design.md)
 - [MySQL 数据查询 CLI 设计](./2026-08-11-mysql-query-design.md)
 - [easy CLI 配置与 Home 初始化设计](./2026-08-11-config-layer-design.md)
+- [Project 与 Task 管理 CLI 设计](./2026-08-28-project-management-design.md)
 
 ### `internal/cli`
 
@@ -37,15 +42,22 @@
 - [外置 Skill 注册与 easy-cli 聚合索引设计](./2026-08-14-external-skill-catalog-design.md)
 - [MySQL 数据查询 CLI 设计](./2026-08-11-mysql-query-design.md)
 - [easy CLI 配置与 Home 初始化设计](./2026-08-11-config-layer-design.md)
+- [Project 与 Task 管理 CLI 设计](./2026-08-28-project-management-design.md)
 
 ### `internal/config`
 
 - [easy CLI 配置与 Home 初始化设计](./2026-08-11-config-layer-design.md)
+- [Project 与 Task 管理 CLI 设计](./2026-08-28-project-management-design.md)
 
 ### `internal/projectroot`
 
 - [easy CLI 配置与 Home 初始化设计](./2026-08-11-config-layer-design.md)
 - [外置 Skill 注册与 easy-cli 聚合索引设计](./2026-08-14-external-skill-catalog-design.md)
+- [Project 与 Task 管理 CLI 设计](./2026-08-28-project-management-design.md)
+
+### `internal/project`
+
+- [Project 与 Task 管理 CLI 设计](./2026-08-28-project-management-design.md)
 
 ### `internal/prompt`
 
@@ -150,3 +162,11 @@
 - `skills/smb-work-order`
 - `README.md`
 - `.gitignore`
+
+### [Project 与 Task 管理 CLI 设计](./2026-08-28-project-management-design.md)
+
+- `cmd/easy`
+- `internal/cli`
+- `internal/config`
+- `internal/projectroot`
+- `internal/project`

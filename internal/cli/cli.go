@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/Giuliao/easy-cli/internal/config"
 	"github.com/Giuliao/easy-cli/internal/mysql"
+	"github.com/Giuliao/easy-cli/internal/project"
 	"github.com/Giuliao/easy-cli/internal/prompt"
 	"github.com/Giuliao/easy-cli/internal/skill"
 	"github.com/spf13/cobra"
@@ -37,6 +39,7 @@ var Version = "dev"
 type app struct {
 	registry *skill.Registry
 	options  Options
+	db       *sql.DB
 	exitCode int
 }
 
@@ -77,7 +80,13 @@ func Run(args []string, registry *skill.Registry, options Options) int {
 		options.ErrOut = io.Discard
 	}
 	autoRefreshEasyCLI(registry, options)
-	a := &app{registry: registry, options: options}
+	db, err := project.Open(options.HomeDir)
+	if err != nil {
+		fmt.Fprintf(options.ErrOut, "open project database: %v\n", err)
+		return 1
+	}
+	defer db.Close()
+	a := &app{registry: registry, options: options, db: db}
 	rootCmd := a.buildRootCmd()
 	rootCmd.SetArgs(args)
 	rootCmd.SetOut(options.Out)
@@ -244,6 +253,8 @@ func (a *app) buildRootCmd() *cobra.Command {
 	rootCmd.AddCommand(a.buildMySQLCmd())
 	rootCmd.AddCommand(a.buildConfigCmd())
 	rootCmd.AddCommand(a.buildSkillCmd())
+	rootCmd.AddCommand(a.buildProjectCmd())
+	rootCmd.AddCommand(a.buildTaskCmd())
 
 	// Register dynamic skills as top-level commands.
 	for _, s := range a.registry.List() {
@@ -702,6 +713,19 @@ func (a *app) printRootHelp(out io.Writer) {
 		{"config get <key>", "Print an allowed non-sensitive configuration value."},
 		{"mysql ddl", "Export MySQL base-table CREATE TABLE DDL."},
 		{"mysql query", "Execute SQL and output database rows."},
+		{"project create <name>", "Create a new project."},
+		{"project list", "List all projects."},
+		{"project show <name>", "Show project details and its tasks."},
+		{"project close <name>", "Close a project."},
+		{"project delete <name>", "Delete a project."},
+		{"project use <name>", "Set the current project for this repository."},
+		{"task create", "Create a new task."},
+		{"task list", "List tasks."},
+		{"task show <id>", "Show task details."},
+		{"task update <id>", "Update task fields."},
+		{"task delete <id>", "Delete a task."},
+		{"task attach <id>", "Attach a task to a project."},
+		{"task detach <id>", "Detach a task from a project."},
 	})
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "Skills:")

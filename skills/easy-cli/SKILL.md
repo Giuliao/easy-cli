@@ -48,8 +48,11 @@ The shorthand is equivalent to `easy skill prompt <skill-name>` and outputs the 
 | Discover capabilities | `easy skill list` | List skill names, descriptions, and installation status |
 | Read SMB development constraints | `easy skill prompt smb-work-order` | Load the local development and delivery rules |
 | Read MySQL DDL workflow | `easy skill prompt mysql-ddl-export` | Load connection, password, safety, and result-handling rules |
+| Read project & task workflow | `easy skill prompt project-workflow` | Load the SOP for tracking agent development work with projects and tasks |
 | Export MySQL table DDL | `easy mysql ddl ...` | Execute the read-only DDL export |
 | Query MySQL data | `easy mysql query --sql <statement>` | Execute the supplied SQL and return JSON rows by default |
+| Manage projects | `easy project <subcommand>` | Create, list, show, close, delete projects; set current project context |
+| Manage tasks | `easy task <subcommand>` | Create, list, show, update, delete tasks; attach/detach from projects |
 | Initialize Home configuration | `easy config init` | Create a private local template when the user explicitly requests setup |
 | Read a configured value | `easy config get <key>` | Read one allowed non-sensitive Home/project configuration value |
 | Inspect one skill | `easy skill show <skill-name>` | Read metadata and installation status |

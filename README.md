@@ -19,7 +19,7 @@ curl -fsSL https://raw.githubusercontent.com/Giuliao/easy-cli/main/install.sh | 
 EASY_INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/Giuliao/easy-cli/main/install.sh | sh
 
 # 安装指定版本
-EASY_VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/Giuliao/easy-cli/main/install.sh | sh
+EASY_VERSION=v0.2.0 curl -fsSL https://raw.githubusercontent.com/Giuliao/easy-cli/main/install.sh | sh
 ```
 
 也可以直接从 [Releases](https://github.com/Giuliao/easy-cli/releases) 下载对应平台的二进制。

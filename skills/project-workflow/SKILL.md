@@ -39,7 +39,66 @@ If you are working inside the project's git repository, set it as the current pr
 
     easy project use <name>
 
-### 2. Create a task for your session
+### 2. Set up the workspace
+
+Before creating a task, prepare your working branch and directory.
+
+**Default behavior**: create a new branch in a separate git worktree, based on the repository's default branch (`main`, or `master` if `main` does not exist). This isolates your work from the user's current working tree and avoids disturbing their state.
+
+#### Detect the default branch
+
+```
+git rev-parse --verify main >/dev/null 2>&1 && BASE=main || BASE=master
+```
+
+Use `$BASE` as the base branch unless the user specifies otherwise.
+
+#### Interpret user overrides
+
+The user may change the default behavior. Look for these intents in their request:
+
+| User intent (examples) | Use worktree? | Branch action |
+|---|---|---|
+| (not specified) | yes | create a new branch from `$BASE` |
+| "no worktree", "in current directory", "don't create worktree" | no | create a new branch from `$BASE` in the current directory |
+| "use branch X", "on branch X" | yes | check out existing branch `X` |
+| "use branch X, no worktree" | no | check out existing branch `X` |
+| "base on Y", "from Y", "branch off Y" | yes | create a new branch from `Y` |
+| "new branch X from Y" | yes | create new branch `X` from `Y` |
+
+If the user gives a branch name, use it. Otherwise derive one from the project name or a short description of the work, e.g. `feature/<project>-<short-desc>`.
+
+#### Commands
+
+New worktree + new branch from `$BASE` (the default):
+
+```
+git worktree add ../<worktree-dir> -b <new-branch> $BASE
+cd ../<worktree-dir>
+```
+
+No worktree + new branch from `$BASE`:
+
+```
+git checkout -b <new-branch> $BASE
+```
+
+Use an existing branch with a worktree:
+
+```
+git worktree add ../<worktree-dir> <existing-branch>
+cd ../<worktree-dir>
+```
+
+Use an existing branch without a worktree:
+
+```
+git checkout <existing-branch>
+```
+
+Name the worktree directory after the branch, e.g. `../wt-<branch>`. After this step, your current directory and branch are the ones recorded in the task.
+
+### 3. Create a task for your session
 
 At the start of your agent session, create a task that records who you are and where you are working.
 
@@ -62,11 +121,11 @@ Field guidance:
 
 The command prints the new task ID. **Keep it** — you will need it to update the task later.
 
-### 3. Do the work
+### 4. Do the work
 
 Develop normally. Commit on your branch. If you are working in a separate git worktree, that is fine — each worktree is its own directory and branch, so create one task per worktree/session.
 
-### 4. Update the commit range as you go
+### 5. Update the commit range as you go
 
 Whenever you make new commits, update the task's commit range so the project record reflects your progress.
 
@@ -74,7 +133,7 @@ Whenever you make new commits, update the task's commit range so the project rec
 
 You can also update other fields if they change (branch, session, directory, agent).
 
-### 5. Check what others are doing
+### 6. Check what others are doing
 
 To see all tasks under the project (including those from other agents in other worktrees):
 
@@ -86,7 +145,7 @@ Or list tasks filtered by project:
 
 This helps you avoid conflicts and understand what parallel work is in flight.
 
-### 6. Finish up
+### 7. Finish up
 
 When your session's work is complete:
 

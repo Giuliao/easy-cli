@@ -557,11 +557,8 @@ func (a *app) runSkillList() error {
 
 	for _, selected := range skills {
 		status := "not-installed"
-		path, err := skill.InstallPath(selected.Name, skill.InstallOptions{WorkingDir: a.options.WorkingDir, HomeDir: a.options.HomeDir})
-		if err == nil {
-			if _, statErr := os.Stat(path); statErr == nil {
-				status = "installed"
-			}
+		if a.skillInstalled(selected.Name) {
+			status = "installed"
 		}
 
 		lines := wrapText(selected.Description, descWidth-continuationIndent)
@@ -584,15 +581,29 @@ func (a *app) runSkillShow(name string) error {
 		return a.fail(1, fmt.Errorf("unknown skill %q", name))
 	}
 	status := "not-installed"
-	path, err := skill.InstallPath(selected.Name, skill.InstallOptions{WorkingDir: a.options.WorkingDir, HomeDir: a.options.HomeDir})
-	if err == nil {
-		if _, statErr := os.Stat(path); statErr == nil {
-			status = "installed"
-		}
+	if a.skillInstalled(selected.Name) {
+		status = "installed"
 	}
 	fmt.Fprintf(a.options.Out, "Name: %s\nDescription: %s\nOrigin: %s\nSource: %s\nStatus: %s\n",
 		selected.Name, selected.Description, selected.Origin, selected.SourcePath, status)
 	return nil
+}
+
+func (a *app) skillInstalled(name string) bool {
+	for _, global := range []bool{false, true} {
+		path, err := skill.InstallPath(name, skill.InstallOptions{
+			WorkingDir: a.options.WorkingDir,
+			HomeDir:    a.options.HomeDir,
+			Global:     global,
+		})
+		if err != nil {
+			continue
+		}
+		if _, statErr := os.Stat(path); statErr == nil {
+			return true
+		}
+	}
+	return false
 }
 
 func (a *app) runSkillInstall(name string, global, force bool) error {

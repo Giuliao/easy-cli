@@ -48,11 +48,17 @@ The shorthand is equivalent to `easy skill prompt <skill-name>` and outputs the 
 | Discover capabilities | `easy skill list` | List skill names, descriptions, and installation status |
 | Read SMB development constraints | `easy skill prompt smb-work-order` | Load the local development and delivery rules |
 | Read MySQL DDL workflow | `easy skill prompt mysql-ddl-export` | Load connection, password, safety, and result-handling rules |
-| Read project & task workflow | `easy skill prompt project-workflow` | Load the SOP for tracking agent development work with projects and tasks |
+| Read project/worktree workflow | `easy skill prompt project-workflow` | Load the resume-first SOP for work segments spanning sessions and agents |
+| Inspect current work | `easy work status [--dir <path>] [--json]` | Read the workspace binding, current task and actual Git state without writing |
+| Resume work idempotently | `easy work ensure [--project <name>] [--dir <path>] [--agent <type>] [--task <id> \| --new-task] [--json]` | Restore the existing task; create only when no candidate exists or a new work segment is explicit |
+| Record work progress | `easy work checkpoint [--dir <path>] [--json]` | Advance head with fixed base and record dirty state/history; no task creation or Git mutation |
+| Inspect recorded progress | `easy work history [--dir <path> \| --workspace <id>] [--json]` | List workspace checkpoints, including earlier tasks or archived/offline workspaces |
 | Export MySQL table DDL | `easy mysql ddl ...` | Execute the read-only DDL export |
 | Query MySQL data | `easy mysql query --sql <statement>` | Execute the supplied SQL and return JSON rows by default |
-| Manage projects | `easy project <subcommand>` | Create, list, show, close, delete projects; set current project context |
-| Manage tasks | `easy task <subcommand>` | Create, list, show, update, delete tasks; attach/detach from projects |
+| Locate project workspaces | `easy project show <name> [--json]` | Show tasks and bound workspaces, including when starting in a generic directory |
+| Bind a worktree | `easy project use <name> [--dir <path>] [--replace]` | Bind without creating a task; replacement requires the user's decision |
+| Manage project lifecycle | `easy project <subcommand>` | Create/list/delete records; close/reopen require an explicit human request and `--confirm` |
+| Manage task records | `easy task <subcommand>` | Explicit CRUD and attach/detach; optional legacy `--session` is not recovery identity |
 | Initialize Home configuration | `easy config init` | Create a private local template when the user explicitly requests setup |
 | Read a configured value | `easy config get <key>` | Read one allowed non-sensitive Home/project configuration value |
 | Inspect one skill | `easy skill show <skill-name>` | Read metadata and installation status |
@@ -61,6 +67,16 @@ easy also discovers skills from `~/.config/easy-cli/skills/<name>/SKILL.md` and 
 
 <!-- EASY_EXTERNAL_SKILLS_START -->
 <!-- EASY_EXTERNAL_SKILLS_END -->
+
+## Development work routing
+
+For development work, load `project-workflow` and resume the known project/worktree before initializing anything. A task is a cross-session work segment; changing session or agent does not create a task, branch or worktree. Do not generate or require `--session`.
+
+`work ensure` returns the existing current task idempotently; `--agent` only applies on creation. Without a current task, reuse the unique matching old task; multiple candidates require an explicit `--task <id>` or `--new-task`. After replacement, deletion or detachment clears the current task, require an explicit `--task` or `--new-task` instead of inheriting an older task. Binding conflicts require the user before `project use --replace`. When project/branch/common dir changes, replacement archives the old workspace and history, creates a new workspace identity, and transfers neither old task nor old-project checkpoints. Reusing the same binding is idempotent; explicit `--replace` on that binding may clear current task without rewriting history. `project show` includes `active` flags and archived locations; confirm the active workspace, as it does not check whether other workspaces are online.
+
+Checkpoint keeps base stable, advances head and records dirty state without committing. Divergent history, branch/common-dir/association drift or a closed project must not be silently repaired. A session's completion never authorizes `project close <name> --confirm` or `project reopen <name> --confirm`: require the user's explicit request; the flag is only an accident guard.
+
+Status / ensure / checkpoint / history are callable by external agents or hosts; no specific agent hook is integrated and no every-turn execution is guaranteed.
 
 ## Configuration
 

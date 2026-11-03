@@ -1,5 +1,7 @@
 # Project 与 Task 管理 CLI 设计
 
+> **部分已被取代（2026-11-03）**：续接与开发追踪以 [基于 Project / Worktree 的跨会话工作续接设计](<./2026-11-03-worktree-project-resume-design.md>) 为准。下文按 agent session 定义 task、要求/生成 session ID、依赖仓库 context 续接、任意字符串 commit range 及自动收尾关闭的旧模型不再适用；工作身份属于 project/worktree，task 跨会话，`--session` 仅为可选兼容字段，checkpoint 校验 Git 历史，close/reopen 必须由用户明确要求并带 `--confirm`。旧 CRUD 与数据保留；本文件其余内容作为历史设计，不再指导被覆盖的行为。
+
 ## 背景与目标
 
 `easy` CLI 目前提供 skill 管理和 MySQL 访问能力，但缺少对 AI agent 开发工作的追踪能力。

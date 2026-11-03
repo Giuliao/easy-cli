@@ -212,14 +212,14 @@ printf '%s\n' "$MYSQL_PASSWORD" | ./easy mysql query \
 
 ## Project / Worktree 跨会话续接
 
-工作身份属于 project 与实际 Git worktree；task 是可跨会话接力的一段工作，不是一次 agent 会话。新会话或切换 agent 应先恢复既有现场，不自动新建分支、worktree 或 task。
+工作身份属于 project 与实际 Git worktree；task 是该仓库的持续开发记录，跨会话、跨 agent 复用，不是一次 agent 会话。新会话或切换 agent 应先恢复既有现场，不自动新建分支、worktree 或 task。
 
 ```bash
 # 在已知工作区中查看绑定和实际 Git 状态，再幂等恢复当前 task
 ./easy work status --dir /path/to/worktree --json
 ./easy work ensure --dir /path/to/worktree --agent codex --json
 
-# 从通用目录启动时，先查看项目已绑定的 workspaces 和 tasks
+# 从通用目录启动时，先查看项目已有的 tasks
 ./easy project show <name> --json
 ```
 
@@ -231,23 +231,25 @@ printf '%s\n' "$MYSQL_PASSWORD" | ./easy mysql query \
 ./easy work ensure --project <name> --dir /path/to/worktree --agent codex
 ```
 
-`project use` 只绑定工作区，不创建 task；相同绑定重复执行是幂等的。项目、分支或 Git common dir 冲突必须由用户决定，确认后才用 `--replace`：旧绑定及其历史归档，新绑定使用新的 workspace 身份，不转移旧 task 或旧项目的 checkpoints。同一绑定显式 `--replace` 可清空 current task，但不改写历史。`project show` 的 workspaces 包含 `active` 标记，也可显示已归档的历史位置；续接时先核对 active 现场。不要按会话 ID、最近活跃项目或名称相似度猜测现场。
+`project use` 只把当前 worktree 的 `.easy-cli/context` 指向项目，不创建 task；同一项目重复执行是幂等的，并保留 current task。项目冲突必须由用户决定，确认后才用 `--replace`：context 改指新项目并清空 task 指针，旧 project、task 和 checkpoint 历史原样保留，既不迁移也不归档，下一次 `work ensure` 为新项目建立它自己的 task。不要按会话 ID、最近活跃项目或名称相似度猜测现场。
 
-`work ensure` 重复执行会返回同一个 current task；`--agent` 只用于首次创建。首次没有 current task 时复用唯一的同 project/目录/分支旧 task，无候选才创建；多个候选必须明确选择。替换绑定、删除或解除关联清空 current task 后，必须显式 `--task` 或 `--new-task`，不会自动继承旧任务。新会话本身不是新增工作段的理由：
+`work ensure` 重复执行会返回同一个 current task；`--agent` 只用于首次创建。没有 task 指针时，按 project + worktree + branch 匹配已有 task：唯一则复用，多个必须用 `--task <id>` 明确选择，确实没有该目录的记录才创建。分支漂移、失效指针或指针指向别的项目一律报错，不会新建记录、重置 base 或继承其他 task。新会话、换 agent、修问题、补功能都不是新增工作段的理由；task 是该仓库的持续开发记录，随每次反馈继续推进：
 
 ```bash
-# 选择已经核对的旧 task，或明确开始新的工作段（二选一）
+# 多个候选时显式选择已核对的 task
 ./easy work ensure --project <name> --dir /path/to/worktree --task <id>
-./easy work ensure --project <name> --dir /path/to/worktree --agent codex --new-task
 
 # 记录进展及交接，不自动创建 task 或提交 Git 变更
 ./easy work checkpoint --dir /path/to/worktree --json
 ./easy work history --dir /path/to/worktree --json
+
+# 不需要现场在线时，按 task id 查询全部历史
+./easy work history --task <id> --json
 ```
 
 `checkpoint` 固定 task 的 base、向当前 HEAD 推进 head，记录暂存、未暂存和非忽略 untracked 变更的 dirty 标记，并追加历史。范围表示工作段，不保证是某个 agent 的独占贡献。分支/绑定不一致或 reset/rebase 造成历史分叉时，`ensure` / `checkpoint` 拒绝覆盖；先人工核对，不自动切分支、改范围或重建 task。
 
-`easy task create` / `update` 仍用于显式管理记录；`--session` 仅为可选的旧数据溯源字段，不生成、不要求，也不用于续接。显式 `task create` 不会自行成为工作区的 current task。
+`easy task create` / `update` 仍用于显式管理记录；`--session` 仅为可选的旧数据溯源字段，不生成、不要求，也不用于续接。显式 `task create` 不会自行成为 worktree 的 current task，需要 `work ensure --task` 才会被选定。
 
 一轮工作结束只做 checkpoint 和交接，不自动关闭项目。仅在用户明确要求关闭或重新打开项目后执行：
 
@@ -255,8 +257,6 @@ printf '%s\n' "$MYSQL_PASSWORD" | ./easy mysql query \
 ./easy project close <name> --confirm
 ./easy project reopen <name> --confirm
 ```
-
-归档或离线工作区的历史可用 `./easy work history --workspace <workspace-id> --json` 读取（ID 来自 `project show`），不会混入新绑定项目的历史。
 
 Git 边界：需要已有 commit 和非 detached 分支。普通 linked worktree、子目录和 symlink 路径可续接；少数 linked worktree 将共享 Git 元数据移出标准 `.git` 布局后，Git 无法可靠给出主工作区身份，此时命令明确拒绝并提示选择主工作区或恢复标准布局。
 

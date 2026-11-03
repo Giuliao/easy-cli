@@ -165,7 +165,7 @@ func (a *app) runTaskCreate(agentType, sessionID, branch, directory, commitRange
 			// Manual legacy task records may describe a directory without Git.
 			// Database bindings take precedence whenever Git is available.
 			if _, gitErr := project.ReadGitState(directory); gitErr == nil {
-				return a.fail(1, fmt.Errorf("task create: resolve workspace: %w", err))
+				return a.fail(1, fmt.Errorf("task create: resolve work context: %w", err))
 			}
 			projectName = project.CurrentProject(directory)
 		}

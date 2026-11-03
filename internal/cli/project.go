@@ -127,11 +127,14 @@ func (a *app) buildProjectUseCmd() *cobra.Command {
 		Short: "Bind this worktree to a project; never switch branches.",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			w, err := project.BindWorkspace(a.db, a.workDirectory(directory), args[0], replace)
+			s, err := project.BindProject(a.db, a.workDirectory(directory), args[0], replace)
 			if err != nil {
 				return a.fail(1, fmt.Errorf("project use: %w", err))
 			}
-			fmt.Fprintf(a.options.Out, "Current project set to %q\nWorkspace: %s\nDirectory: %s\nBranch: %s\n", args[0], w.ID, w.Directory, w.Branch)
+			fmt.Fprintf(a.options.Out, "Current project set to %q\nDirectory: %s\nBranch: %s\n", args[0], s.Git.Directory, s.Git.Branch)
+			if s.Task != nil {
+				fmt.Fprintf(a.options.Out, "Current task: %s\n", s.Task.ID)
+			}
 			return nil
 		},
 	}
@@ -188,16 +191,11 @@ func (a *app) runProjectShow(name string, jsonOutput bool) error {
 	if err != nil {
 		return a.fail(1, fmt.Errorf("project show: %w", err))
 	}
-	workspaces, err := project.ListWorkspacesByProject(a.db, p.ID)
-	if err != nil {
-		return a.fail(1, fmt.Errorf("project show: %w", err))
-	}
 	if jsonOutput {
 		payload := struct {
 			project.Project
-			Tasks      []project.Task      `json:"tasks"`
-			Workspaces []project.Workspace `json:"workspaces"`
-		}{Project: p, Tasks: tasks, Workspaces: workspaces}
+			Tasks []project.Task `json:"tasks"`
+		}{Project: p, Tasks: tasks}
 		return writeJSON(a.options.Out, payload)
 	}
 	fmt.Fprintf(a.options.Out, "Name: %s\n", p.Name)
@@ -207,17 +205,6 @@ func (a *app) runProjectShow(name string, jsonOutput bool) error {
 	fmt.Fprintf(a.options.Out, "Created: %s\n", p.CreatedAt.Format(time.RFC3339))
 	if p.EndedAt != nil {
 		fmt.Fprintf(a.options.Out, "Ended: %s\n", p.EndedAt.Format(time.RFC3339))
-	}
-	fmt.Fprintln(a.options.Out)
-	fmt.Fprintln(a.options.Out, "Workspaces:")
-	if len(workspaces) == 0 {
-		fmt.Fprintln(a.options.Out, "  (no bound workspaces; legacy task directories are listed below)")
-	} else {
-		rows := make([][]string, 0, len(workspaces))
-		for _, w := range workspaces {
-			rows = append(rows, []string{w.ID, fmt.Sprint(w.Active), w.Repository, w.Branch, w.Directory, w.CurrentTaskID})
-		}
-		printTable(a.options.Out, []string{"ID", "ACTIVE", "REPOSITORY", "BRANCH", "DIRECTORY", "CURRENT_TASK"}, rows)
 	}
 	fmt.Fprintln(a.options.Out)
 	fmt.Fprintln(a.options.Out, "Tasks:")

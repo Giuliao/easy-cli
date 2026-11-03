@@ -1,64 +1,74 @@
-# 基于 Project / Worktree 的跨会话工作续接设计
+# 基于 Project / Task 的跨会话工作续接设计
 
 ## 背景与目标
 
-需求验收可能跨越多个 AI 会话；会话结束、上下文压缩或切换 agent 不改变需求和开发现场。按用户已确认方案，工作身份属于 project 与 worktree，task 代表一段可跨会话接力的工作，而非会话本身。
+新会话主要在原需求上下文上修问题、补功能；换会话或 agent 不应改变 project、仓库 task、worktree 或 commit 起点。Task 代表需求在某个仓库/开发目录中的持续开发记录，不是会话或每轮反馈的工作段。
+
+保留 Project + Task 模型，仅增强当前绑定和 Git 进度记录。原 PR 中独立 Workspace、归档和按工作段新建 task 的设计撤回。本设计覆盖旧 Project/Task spec 的会话身份与收尾规则。
 
 ## 非目标
 
-- 不创建、切换、删除 Git 分支或 worktree，不自动提交或改写历史。
-- 不集成特定 agent 的 hook，不声称 CLI 能保证每轮自动调用。
-- 不按会话 ID、最近活跃项目或名称相似度自动选择工作。
-- 不新增需求验收状态机、完整对话存档或独占贡献统计。
+- 不引入 Workspace 模型、workspaces 表、归档或新的现场生命周期。
+- 不因换会话、反馈修正或补功能自动新建 task；不提供 `work ensure --new-task`。
+- 不创建/切换/删除 Git 分支或 worktree，不自动提交、rebase 或 reset。
+- 不集成 agent hooks，不承诺每轮自动调用；不存完整对话、不推测需求验收结束。
+- 不按 session、最近活跃或名称相似度猜测项目；不承诺 commit 范围是 agent 独占贡献。
+- 不修改 `AGENTS.md`。
 
 ## 关联模块
 
-- `internal/project`：SQLite 向后兼容迁移、工作区绑定、幂等续接、Git checkpoint。
-- `internal/cli`：project/work/task 命令、JSON 与文本输出。
-- `skills/project-workflow`：恢复优先、跨会话 task、用户确认关闭的开发规则。
+- `internal/project`：worktree 本地 context、持续 task 恢复、SQLite 与 checkpoint。
+- `internal/cli`：project/task/work 命令及输出。
+- `skills/project-workflow`：原需求原 task 续接、需求文档阅读和明确关闭规则。
 - `skills/easy-cli`：能力路由。
-- `README.md`：跨会话用法与限制。
+- `README.md`：用法与边界。
 
-本设计覆盖旧 Project/Task spec 中的会话身份、上下文和收尾规则；旧 CRUD 与数据保留。
+## 当前绑定
+
+当前 worktree 根目录的 `.easy-cli/context` 写入 JSON：
+
+```json
+{"project_id":"...","project_name":"sales-order","task_id":"tsk_..."}
+```
+
+task_id 可空。文件仍兼容旧版纯 project name；ensure 首次恢复后升级 JSON。数据库 project_id 为稳定身份，项目删除后不能因重建同名而自动接上。读取失败、无效 JSON、未知 project 或失效 task 必须明确报错，不降级到猜测。各 linked worktree context 相互独立；子目录/symlink 解析到所属 Git root。
+
+context 只存 project/task 指针，不复制 branch/directory/Git common dir，不创建单独的 Workspace 实体。project use 相同 project 保留原 task；跨 project 必须显式 --replace，清空 task 指针，不改变旧 task 或历史。删除/解除关联后的失效 task 指针不会自动继承其他 task，需明确 --task 选择。
 
 ## 命令设计
 
-- `easy project use <name>`：检查 project 为 active，绑定当前真实 Git worktree（规范化绝对路径、Git common dir、仓库名、分支）。保留 `.easy-cli/context` 名称格式作兼容。不同项目绑定冲突时必须显式 `--replace`；替换不能静默继承原 task。支持 `--dir` 选择工作区。不创建 task。
-- `easy work status [--dir <path>] [--json]`：只读展示绑定的 project、workspace、可选 current task 与实际 Git 状态；列出分支/历史/生命周期不一致，不写记录。未绑定返回可操作错误。
-- `easy work ensure [--project <name>] [--dir <path>] [--agent <type>] [--task <id> | --new-task] [--json]`：按 worktree 恢复。新会话、换 agent 不创建新 task；agent 只用于首次创建。已有 current task 直接返回。缺少 current task 时，复用唯一的同 project/目录/分支旧 task；多个候选必须用 `--task` 选择或显式 `--new-task`，不猜测。无绑定时可由明确 project 或旧 context 引导首次绑定。绑定冲突、非 active、分支漂移、历史不一致时拒绝。无候选才创建空 session 的 task，并固定初始 HEAD 为 base。`--new-task` 明确划分新的工作段，在原工作区创建 task，不新建分支。
-- `easy work checkpoint [--dir <path>] [--json]`：仅对已有 current task 采集 Git，固定 base，推进 head，并记录 dirty 标记及追加不可变历史。不得自行 ensure/create；拒绝分支/common dir/关联不一致、非法范围、reset/rebase 导致旧 head 不再为祖先。不修改 Git、不自动提交。
-- `easy work history [--dir <path> | --workspace <id>] [--json]`：按当前工作区展示 checkpoint 历史（包含旧 task）；显式 workspace ID 可读取归档或离线现场的历史，不混入其他项目。
-- `easy project show <name>`：在现有 tasks 之外展示已绑定 workspaces，供从通用目录启动的新会话找到各仓库现场；不验证其他工作区是否在线。
-- `easy project close <name> --confirm` 与 `easy project reopen <name> --confirm`：显式生命周期动作。workflow 只允许用户明确要求后执行；参数是误操作保护，不构成用户授权验证。
-- `easy task create` 的 `--session` 改为可选，旧字段和 update 能力保留作溯源，不参与工作恢复。显式 task create 仍为新增工作记录，不自行设置 current task。
+- `easy project use <name> [--dir <path>] [--replace]`：核对 active project，更新当前 worktree context，不创建 task、不切分支。相同 project 幂等并保留 task；冲突需明确替换。
+- `easy project show <name> [--json]`：保留原 project + tasks 输出。各 task 的 directory/branch/commit_range 就是跨仓库现场清单，不新增 workspaces 字段。
+- `easy work status [--dir <path>] [--json]`：只读当前 context、project、可选 task 和实际 Git 状态。展示失效指针、分支/目录/历史/lifecycle 不一致；不补写数据。
+- `easy work ensure [--project <name>] [--dir <path>] [--agent <type>] [--task <id>] [--json]`：已有 context.task_id 就沿用；explicit --task 用于选择已存在的正确 task。首次无 task 时按 project + Git worktree root 匹配：唯一且 branch 一致则复用；多个需 --task；目录有旧 task 但 branch 不符报漂移，不新建；确实没有该目录的 task 才创建。新仓库才有新的持续开发记录。--agent 仅用于首次创建。反馈修正、补功能、换会话/agent 均不分段、不重置 base。
+- `easy work checkpoint [--dir <path>] [--json]`：仅对当前明确绑定 task 采集 HEAD/dirty，固定 base、推进 head、追加 task checkpoint 历史；不调用 ensure/create，不改变 Git。
+- `easy work history [--dir <path> | --task <id>] [--json]`：默认读当前 context.task_id；--task 可在通用目录查询 task 的全部历史，无需现场在线。没有归档/workspace 查询。
+- `easy task create` / update：保留显式记录管理；--session 可选兼容溯源，不参与恢复。只有新仓库或用户明确要新增独立记录才创建 task；随后可 ensure --task 选定，不自动切分支。
+- `easy project close <name> --confirm` / reopen：仅有用户明确指令后执行；本轮实现、总结、提交、会话结束均不关闭项目。confirm 只是误操作保护，不是授权证明。
 
-## 数据流与持久化
+## 持久化和一致性
 
-全局 SQLite 新增 `workspaces`：稳定 id、project_id、规范化 worktree directory（active 绑定唯一）、active、task_selection_required、git_common_dir、repository、branch、current_task_id（可空）、时间戳。跨 project/branch/common dir 的显式替换归档旧 workspace 与历史并建立新身份；不把 checkpoints 转移到新项目。同绑定 use 幂等，显式 replace 清空 current task。替换、删除或解除关联后要求显式 --task 或 --new-task，避免静默继承旧 task。分支和路径不是用于猜测项目的提示，而是绑定的校验事实。多个 linked worktree 各有独立目录，common dir 用于识别共享代码仓。删除 project 清理工作区和 checkpoints，保留原 tasks；删除 current task 清空指针，不继承其他 task。
+原 projects/tasks/project_tasks 及 session 字段兼容保留。work_task_progress 只保存 task 的固定 base/head，用于防止手工改 commit_range 后悄悄重置范围，不承载现场模型。task_checkpoints 保存 id、task_id、branch、base_commit、head_commit、dirty、created_at，并以 task_id 外键关联；删除 task 清理其历史，删除 project 保留 task 和历史。
 
-新增 `work_task_progress` 独立固定 task 的 base/head（ensure 初次采集即保存），跨 workspace 重新选择旧 task 时也校验，不能通过手工更新 commit_range 重置 base。checkpoint 仅推进已保存 head。
+写入启用 immediate 事务、外键和 busy timeout。ensure 在数据库事务中重新读取 context、选择/创建 task、固定进度；最终以同目录临时文件 + rename 原子发布 context，再提交数据库。同一数据库并发 ensure 被序列化，不重复建 task。发布失败回滚数据库；commit 失败尽力恢复原 context，若恢复也失败给出明确错误。跨文件/SQLite 的进程崩溃无法提供绝对原子性，失效 task 指针 fail closed，不静默重建。checkpoint 与 task range/progress/history 在一个数据库事务更新；元信息 update 同样串行化，避免覆盖并发 checkpoint。
 
-新增 `work_checkpoints`：递增 id、workspace_id、task_id、branch、base_commit、head_commit、dirty、created_at。checkpoint 与 task range 更新在同一个事务内；ensure 创建 task、关联 project、保存 current task 在同一事务内。数据库连接启用外键、busy timeout，写事务使用 immediate 模式避免并发创建重复 task。
+对已运行 PR 早期版本的本地数据库，仅做一次兼容清理：把原 work_checkpoints 中仍存在的 task 历史转入 task_checkpoints，再移除旧表和 workspace 相关触发器。保留全部 projects/tasks/progress；不将旧 Workspace 绑定写到任意目录，不修改历史 commit。原纯名称 context 通过正常唯一 task 恢复升级；多 task 时需显式选择。
 
-`.easy-cli/context` 只在没有数据库绑定时作为旧名称提示。数据库绑定优先，读错、名称冲突和删除的 project 不静默降级。新绑定不靠共享 common dir context，保持 worktree 隔离。路径通过 Git 根目录、绝对路径和 symlink 规范化；非 Git 目录、空仓库和 detached HEAD 明确报错。旧 task 的可解析目录也按所属 Git worktree 根目录规范化后匹配。普通 linked worktree 支持隔离；若 linked worktree 共享元数据移出标准 `.git` 布局且 Git 将元数据路径误报为主 worktree，无法可靠恢复主仓库身份，此时明确拒绝并提示选择主 worktree 或标准布局。主 worktree 的 separate/symlink 元数据布局仍支持。
+## Git 与需求上下文边界
 
-## Commit 与错误处理
-
-- 新 task 从创建时 HEAD 固定 `base..head`，初始两者相等；换会话不重置 base。
-- 旧 task 的范围只允许两个可解析的十六进制 commit ID（可缩写），恢复时规范化为完整 hash；空范围从当前 HEAD 开始，文档提示无法补采未记录的历史。
-- 采集前检查 base 为旧 head 的祖先，旧 head 为当前 HEAD 的祖先；有 checkpoint 时核对最新记录和 task range，防止手工改动悄悄覆盖。
-- `work status` 报告现场漂移，ensure/checkpoint 拒绝覆盖；人工核对后可明确开始 `--new-task` 或使用另一个正确现场。分支漂移需要先恢复绑定分支，或明确重新绑定。
-- dirty 覆盖暂存、未暂存与非忽略 untracked 文件。context 自身排除，不为记录而要求提交。
-- 范围是可用于 `git log` 的工作段范围，不承诺是某个 agent 独占贡献；rebase 不自动追踪映射。
+- 恢复前读取技术文档、最新需求边界和待解决反馈；Git/context 解决身份与提交范围，不能代替业务上下文。
+- 初次 task 从 HEAD 固定 base..head（初始相等）；旧可解析 hash 范围保留起点并转完整 hash。旧空范围从当前 HEAD 开始，不能补采之前未记录历史。
+- base 必须为旧 head 祖先、旧 head 必须为当前 HEAD 祖先；与 saved progress 不一致时拒绝覆盖。ensure 不推进 head，checkpoint 才推进。
+- task branch/所属 Git root/项目关联不一致、reset/rebase、非法 hash、已关闭项目拒绝静默续接；人工核对，不靠新 task 绕过错误。
+- Git dirty 包含暂存、未暂存、非忽略 untracked；context 自身 bookkeeping 排除。无需提交才能记录。
+- 普通 linked worktree、subdir、symlink 支持；已有 commit 与非 detached 分支必需。linked worktree 元数据移出标准 .git 后若无法识别主仓库则明确报错，主 worktree separate/symlink 元数据仍支持。
 
 ## 测试与验收标准
 
-1. 旧 SQLite schema 可升级；旧 task/session 字段可读，session 不再必填。
-2. 同 worktree 多次 ensure、重新启动 CLI 或切换 agent 都复用同 project/task，base 不变。
-3. linked worktrees、子目录与 symlink 路径正确识别；无绑定、多个候选、显式 project 冲突均不猜测。
-4. legacy context 和唯一旧 task 可恢复；多个旧 task 必须显式选择。
-5. 显式 new-task 复用工作区，checkpoint 推进范围并存历史，未提交变更不会被提交。
-6. 分支切换、reset、rebase、非法 range、task 关联改变、已关闭 project 拒绝静默续接。
-7. close/reopen 无 confirm 不改变状态；本轮完成不关闭项目。
-8. project show 提供跨仓库工作区清单，JSON 和文本路径可用。
-9. 单元、真实临时 Git/worktree 集成、并发幂等与 CLI 重启测试通过；`go test ./...`、race、vet 和 build 通过。
+1. 新数据库不建立 workspaces，旧 Project/Task 和早期 PR checkpoint 可迁移且不丢失。
+2. 多次 ensure、重启 CLI、换 agent、修问题/补功能都复用同 task，base 不变，无 --new-task。
+3. 旧 context、JSON context、多个候选、失效 task、project ID/name 冲突正确处理，不猜测。
+4. linked worktree context 隔离，子目录/symlink task 恢复；branch 漂移不新建记录。
+5. checkpoint 固定 base、推进 head并记录 dirty，history --task 可离线查询，元信息并发更新不丢进度。
+6. 项目关闭需要明确确认，project show 无 workspaces，AGENTS.md 与 main 一致。
+7. 单元、真实 Git/context/数据库迁移和 CLI 测试通过；go test ./...、race、vet、build 通过。

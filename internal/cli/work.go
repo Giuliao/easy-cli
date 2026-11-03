@@ -27,7 +27,7 @@ func (a *app) buildWorkCmd() *cobra.Command {
 	for _, action := range []string{"status", "ensure", "checkpoint", "history"} {
 		var directory string
 		var jsonOutput bool
-		var workspaceID string
+		var taskID string
 		var params project.EnsureWorkParams
 		sub := &cobra.Command{
 			Use: action, Args: cobra.NoArgs,
@@ -36,8 +36,8 @@ func (a *app) buildWorkCmd() *cobra.Command {
 				if action == "history" {
 					var history []project.Checkpoint
 					var err error
-					if workspaceID != "" {
-						history, err = project.WorkHistoryByWorkspace(a.db, workspaceID)
+					if taskID != "" {
+						history, err = project.WorkHistoryByTask(a.db, taskID)
 					} else {
 						history, err = project.WorkHistory(a.db, dir)
 					}
@@ -84,15 +84,13 @@ func (a *app) buildWorkCmd() *cobra.Command {
 			sub.Short = "Restore or initialize the current work segment without creating a branch."
 			sub.Flags().StringVar(&params.ProjectName, "project", "", "explicit project to resume (must match existing binding)")
 			sub.Flags().StringVar(&params.AgentType, "agent", "", "agent type for a newly created task only")
-			sub.Flags().StringVar(&params.TaskID, "task", "", "explicitly select an existing task in this workspace")
-			sub.Flags().BoolVar(&params.NewTask, "new-task", false, "explicitly start a new work segment in the same workspace")
-			sub.MarkFlagsMutuallyExclusive("task", "new-task")
+			sub.Flags().StringVar(&params.TaskID, "task", "", "explicitly select an existing task when several match this worktree")
 		case "checkpoint":
 			sub.Short = "Record Git HEAD and dirty state, preserving the task's original base."
 		case "history":
-			sub.Short = "List saved Git checkpoints for this workspace."
-			sub.Flags().StringVar(&workspaceID, "workspace", "", "explicit workspace ID, including archived/offline workspaces")
-			sub.MarkFlagsMutuallyExclusive("dir", "workspace")
+			sub.Short = "List saved Git checkpoints for the current task."
+			sub.Flags().StringVar(&taskID, "task", "", "explicit task ID, readable without its worktree")
+			sub.MarkFlagsMutuallyExclusive("dir", "task")
 		}
 		cmd.AddCommand(sub)
 	}
@@ -101,15 +99,14 @@ func (a *app) buildWorkCmd() *cobra.Command {
 
 func (a *app) printWorkState(s project.WorkState) {
 	fmt.Fprintf(a.options.Out, "Project: %s (%s)\n", s.Project.Name, s.Project.Status)
-	fmt.Fprintf(a.options.Out, "Workspace: %s\nRepository: %s\nDirectory: %s\nBranch: %s\n", s.Workspace.ID, s.Workspace.Repository, s.Workspace.Directory, s.Workspace.Branch)
+	fmt.Fprintf(a.options.Out, "Directory: %s\nBranch: %s\nHEAD: %s\nDirty: %t\n", s.Git.Directory, s.Git.Branch, s.Git.Head, s.Git.Dirty)
 	if s.Task != nil {
 		fmt.Fprintf(a.options.Out, "Task: %s\nCommit Range: %s\n", s.Task.ID, s.Task.CommitRange)
 	} else {
 		fmt.Fprintln(a.options.Out, "Task: (not selected; run easy work ensure)")
 	}
-	fmt.Fprintf(a.options.Out, "Git Branch: %s\nHEAD: %s\nDirty: %t\n", s.Git.Branch, s.Git.Head, s.Git.Dirty)
 	if s.Created {
-		fmt.Fprintln(a.options.Out, "Created a new work segment; later sessions will reuse this task.")
+		fmt.Fprintln(a.options.Out, "Created the task for this worktree; later sessions reuse it.")
 	}
 	if s.Checkpoint != nil {
 		fmt.Fprintf(a.options.Out, "Checkpoint: %d\n", s.Checkpoint.ID)

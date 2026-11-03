@@ -85,13 +85,12 @@ func TestWorkCLIRestartResumeAndCheckpoint(t *testing.T) {
 		t.Fatal(out)
 	}
 	var shown struct {
-		Workspaces []project.Workspace `json:"workspaces"`
-		Tasks      []project.Task      `json:"tasks"`
+		Tasks []project.Task `json:"tasks"`
 	}
-	if err := json.Unmarshal([]byte(cliWorkOK(t, home, t.TempDir(), "project", "show", "feature", "--json")), &shown); err != nil || len(shown.Workspaces) != 1 || len(shown.Tasks) != 1 {
+	if err := json.Unmarshal([]byte(cliWorkOK(t, home, t.TempDir(), "project", "show", "feature", "--json")), &shown); err != nil || len(shown.Tasks) != 1 || shown.Tasks[0].ID != first.Task.ID {
 		t.Fatalf("project show %+v %v", shown, err)
 	}
-	if out := cliWorkOK(t, home, dir, "project", "show", "feature"); !strings.Contains(out, "Workspaces:") || !strings.Contains(out, "ACTIVE") {
+	if out := cliWorkOK(t, home, dir, "project", "show", "feature"); !strings.Contains(out, "Tasks:") || !strings.Contains(out, first.Task.ID) {
 		t.Fatal(out)
 	}
 }
@@ -105,7 +104,6 @@ func TestWorkCLIExplicitSelectionConflictAndLifecycle(t *testing.T) {
 		{"work", "ensure", "--project", "other"},
 		{"project", "use", "other"},
 		{"project", "close", "feature"},
-		{"work", "ensure", "--task", first.Task.ID, "--new-task"},
 	} {
 		if code, _, _ := cliWorkRun(t, home, dir, args...); code == 0 {
 			t.Fatalf("unsafe command accepted: %v", args)
@@ -119,25 +117,21 @@ func TestWorkCLIExplicitSelectionConflictAndLifecycle(t *testing.T) {
 		t.Fatal("unconfirmed reopen accepted")
 	}
 	cliWorkOK(t, home, dir, "project", "reopen", "feature", "--confirm")
-	second := cliWorkState(t, cliWorkOK(t, home, dir, "work", "ensure", "--new-task", "--json"))
-	if second.Task.ID == first.Task.ID || second.Workspace.ID != first.Workspace.ID {
-		t.Fatalf("new segment = %+v", second)
-	}
-	selected := cliWorkState(t, cliWorkOK(t, home, dir, "work", "ensure", "--task", first.Task.ID, "--json"))
-	if selected.Task.ID != first.Task.ID {
-		t.Fatalf("selection = %+v", selected)
+	resumed := cliWorkState(t, cliWorkOK(t, home, dir, "work", "ensure", "--json"))
+	if resumed.Created || resumed.Task.ID != first.Task.ID {
+		t.Fatalf("resume after reopen = %+v", resumed)
 	}
 	cliWorkOK(t, home, dir, "work", "checkpoint")
-	cliWorkOK(t, home, dir, "project", "use", "other", "--replace")
-	var archivedHistory []project.Checkpoint
-	if err := json.Unmarshal([]byte(cliWorkOK(t, home, t.TempDir(), "work", "history", "--workspace", first.Workspace.ID, "--json")), &archivedHistory); err != nil || len(archivedHistory) != 1 {
-		t.Fatalf("archived history %+v %v", archivedHistory, err)
+	var history []project.Checkpoint
+	if err := json.Unmarshal([]byte(cliWorkOK(t, home, t.TempDir(), "work", "history", "--task", first.Task.ID, "--json")), &history); err != nil || len(history) != 1 {
+		t.Fatalf("offline history %+v %v", history, err)
 	}
-	if code, _, _ := cliWorkRun(t, home, dir, "work", "ensure"); code == 0 {
+	cliWorkOK(t, home, dir, "project", "use", "other", "--replace")
+	if code, _, _ := cliWorkRun(t, home, dir, "work", "ensure", "--task", first.Task.ID); code == 0 {
 		t.Fatal("replacement inherited task without selection")
 	}
-	third := cliWorkState(t, cliWorkOK(t, home, dir, "work", "ensure", "--new-task", "--json"))
-	if third.Project.Name != "other" || third.Workspace.ID == first.Workspace.ID || third.Task.ID == first.Task.ID {
+	third := cliWorkState(t, cliWorkOK(t, home, dir, "work", "ensure", "--json"))
+	if third.Project.Name != "other" || third.Task.ID == first.Task.ID || !third.Created {
 		t.Fatalf("replacement = %+v", third)
 	}
 }

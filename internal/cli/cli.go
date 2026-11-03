@@ -735,7 +735,7 @@ func (a *app) printRootHelp(out io.Writer) {
 		{"work status", "Show the current project, task and Git state."},
 		{"work ensure", "Resume work by worktree; reuse the current task."},
 		{"work checkpoint", "Save Git progress without resetting the task base."},
-		{"work history", "List workspace checkpoint history."},
+		{"work history", "List checkpoint history of the current task."},
 		{"task create", "Create a new task."},
 		{"task list", "List tasks."},
 		{"task show <id>", "Show task details."},

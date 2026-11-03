@@ -255,6 +255,7 @@ func (a *app) buildRootCmd() *cobra.Command {
 	rootCmd.AddCommand(a.buildSkillCmd())
 	rootCmd.AddCommand(a.buildProjectCmd())
 	rootCmd.AddCommand(a.buildTaskCmd())
+	rootCmd.AddCommand(a.buildWorkCmd())
 
 	// Register dynamic skills as top-level commands.
 	for _, s := range a.registry.List() {
@@ -727,9 +728,14 @@ func (a *app) printRootHelp(out io.Writer) {
 		{"project create <name>", "Create a new project."},
 		{"project list", "List all projects."},
 		{"project show <name>", "Show project details and its tasks."},
-		{"project close <name>", "Close a project."},
+		{"project close <name>", "Close a project after explicit user confirmation (--confirm)."},
+		{"project reopen <name>", "Reopen a project after explicit user confirmation (--confirm)."},
 		{"project delete <name>", "Delete a project."},
-		{"project use <name>", "Set the current project for this repository."},
+		{"project use <name>", "Bind the current worktree to a project."},
+		{"work status", "Show the current project, task and Git state."},
+		{"work ensure", "Resume work by worktree; reuse the current task."},
+		{"work checkpoint", "Save Git progress without resetting the task base."},
+		{"work history", "List checkpoint history of the current task."},
 		{"task create", "Create a new task."},
 		{"task list", "List tasks."},
 		{"task show <id>", "Show task details."},

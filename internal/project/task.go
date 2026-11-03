@@ -41,6 +41,37 @@ type UpdateTaskParams struct {
 }
 
 func CreateTask(db *sql.DB, params CreateTaskParams) (Task, error) {
+	return createTask(db, params)
+}
+
+// CreateTaskInProject creates the record and its association atomically.
+func CreateTaskInProject(db *sql.DB, params CreateTaskParams, projectID string) (Task, error) {
+	tx, err := db.Begin()
+	if err != nil {
+		return Task{}, err
+	}
+	defer tx.Rollback()
+	p, err := projectByID(tx, projectID)
+	if err != nil {
+		return Task{}, err
+	}
+	if p.Status != StatusActive {
+		return Task{}, ErrProjectEnded
+	}
+	t, err := createTask(tx, params)
+	if err != nil {
+		return Task{}, err
+	}
+	if _, err := tx.Exec(`INSERT INTO project_tasks (project_id, task_id) VALUES (?, ?)`, projectID, t.ID); err != nil {
+		return Task{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return Task{}, err
+	}
+	return t, nil
+}
+
+func createTask(q workQuery, params CreateTaskParams) (Task, error) {
 	now := time.Now().UTC()
 	t := Task{
 		ID:          NewTaskID(),
@@ -52,7 +83,7 @@ func CreateTask(db *sql.DB, params CreateTaskParams) (Task, error) {
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
-	_, err := db.Exec(
+	_, err := q.Exec(
 		`INSERT INTO tasks (id, agent_type, session_id, branch, directory, commit_range, created_at, updated_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 		t.ID, t.AgentType, t.SessionID, t.Branch, t.Directory, t.CommitRange,
@@ -123,7 +154,12 @@ func ListTasksByProject(db *sql.DB, projectID string) ([]Task, error) {
 }
 
 func UpdateTask(db *sql.DB, id string, params UpdateTaskParams) (Task, error) {
-	existing, err := GetTask(db, id)
+	tx, err := db.Begin()
+	if err != nil {
+		return Task{}, err
+	}
+	defer tx.Rollback()
+	existing, err := workTask(tx, id)
 	if err != nil {
 		return Task{}, err
 	}
@@ -143,7 +179,7 @@ func UpdateTask(db *sql.DB, id string, params UpdateTaskParams) (Task, error) {
 		existing.CommitRange = *params.CommitRange
 	}
 	existing.UpdatedAt = time.Now().UTC()
-	_, err = db.Exec(
+	_, err = tx.Exec(
 		`UPDATE tasks SET agent_type = ?, session_id = ?, branch = ?, directory = ?, commit_range = ?, updated_at = ?
 		 WHERE id = ?`,
 		existing.AgentType, existing.SessionID, existing.Branch, existing.Directory, existing.CommitRange,
@@ -151,6 +187,9 @@ func UpdateTask(db *sql.DB, id string, params UpdateTaskParams) (Task, error) {
 	)
 	if err != nil {
 		return Task{}, fmt.Errorf("update task: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return Task{}, err
 	}
 	return existing, nil
 }

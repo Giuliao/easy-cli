@@ -1,184 +1,86 @@
 ---
 name: project-workflow
-description: Use easy project and task commands to track AI agent development work. Use when starting or continuing a development task that may involve one or more agent sessions, especially when parallel work happens across git worktrees.
+description: Resume and track AI development work by project and Git worktree with easy work commands. Use when starting or continuing work across sessions or agents; restore the existing task before initializing new work.
 ---
 
-# Project & Task Workflow
+# Project / Worktree Workflow
 
-`easy project` and `easy task` let you track development work across one or more AI agent sessions. A **project** groups related work; a **task** records a single agent session's branch, directory, and commit range.
+A **project** groups related work and has status `active` or `ended`. A **task** is the persistent development record of one repository worktree and branch: it spans sessions and agents, and successive feedback, bug fixes and new features continue the same task instead of starting a new one. The worktree's `.easy-cli/context` stores only the `project_id` / `project_name` / `task_id` pointers; directory, branch, Git common dir and commit range always come from the real Git state. Linked worktrees keep independent context files even when they share a Git common dir.
 
-## When to use this workflow
+## Operating rules
 
-Use it whenever you are about to do development work, especially when:
+- Resume before initializing. A new session, a different agent, a bug fix or an added feature does not create a new task, branch or worktree. Stay in the existing directory and branch unless the user explicitly requests a different setup.
+- Do not select a project/task by session ID, recent activity or a similar name. `--session` is optional legacy metadata: do not generate or require it, and do not use it for recovery.
+- Ask the user about binding conflicts, multiple task candidates, branch/history drift or a closed project. Do not silently replace bindings, rewrite ranges or reopen projects.
+- Session completion is not project completion. Never close/reopen a project without an explicit human request; `--confirm` is an accident guard, not proof of authorization.
+- These CLI commands are externally callable primitives. No agent hooks are integrated, and this SOP cannot guarantee invocation on every turn.
 
-- The work is large enough to be split across multiple agent sessions.
-- Another agent may work on the same project in a separate git worktree.
-- You want a record of which agent worked on what, on which branch, and over which commit range.
+## SOP
 
-## Core concepts
+### 1. Locate and resume the existing work
 
-- **Project**: a container for related tasks. Has a name, description, and status (`active` or `ended`).
-- **Task**: a record of one agent session. Stores the agent type, session ID, branch, working directory, and current commit range. A task belongs to at most one project.
-- **Context**: the current project for a git repository, stored in `.easy-cli/context`. Once set, new tasks in that repo attach to it automatically.
+Read the repository's development instructions first. In a known worktree, inspect its binding and actual Git state, then restore idempotently:
 
-## Standard operating procedure
-
-### 1. Create or select the project
-
-Before starting work, make sure a project exists for the effort.
-
-List existing projects:
-
-    easy project list
-
-If the project already exists, note its name. Otherwise create it:
-
-    easy project create <name> --description "<what this project is about>"
-
-If you are working inside the project's git repository, set it as the current project so tasks attach automatically:
-
-    easy project use <name>
-
-### 2. Set up the workspace
-
-Before creating a task, prepare your working branch and directory.
-
-**Default behavior**: create a new branch in a separate git worktree, based on the repository's default branch (`main`, or `master` if `main` does not exist). This isolates your work from the user's current working tree and avoids disturbing their state.
-
-#### Detect the default branch
-
-```
-git rev-parse --verify main >/dev/null 2>&1 && BASE=main || BASE=master
+```bash
+easy work status --dir <worktree> --json
+easy work ensure --dir <worktree> --agent <type> --json
 ```
 
-Use `$BASE` as the base branch unless the user specifies otherwise.
+From a generic directory, first find the recorded projects and tasks:
 
-#### Interpret user overrides
-
-The user may change the default behavior. Look for these intents in their request:
-
-| User intent (examples) | Use worktree? | Branch action |
-|---|---|---|
-| (not specified) | yes | create a new branch from `$BASE` |
-| "no worktree", "in current directory", "don't create worktree" | no | create a new branch from `$BASE` in the current directory |
-| "use branch X", "on branch X" | yes | check out existing branch `X` |
-| "use branch X, no worktree" | no | check out existing branch `X` |
-| "base on Y", "from Y", "branch off Y" | yes | create a new branch from `Y` |
-| "new branch X from Y" | yes | create new branch `X` from `Y` |
-
-If the user gives a branch name, use it. Otherwise derive one from the project name or a short description of the work, e.g. `feature/<project>-<short-desc>`.
-
-#### Commands
-
-New worktree + new branch from `$BASE` (the default):
-
-```
-git worktree add ../<worktree-dir> -b <new-branch> $BASE
-cd ../<worktree-dir>
+```bash
+easy project list
+easy project show <name> --json
 ```
 
-No worktree + new branch from `$BASE`:
+`project show` lists the project's tasks with directory, branch and commit range. Confirm the directory and branch that match the real Git worktree before resuming, then use that directory rather than the generic startup directory.
 
-```
-git checkout -b <new-branch> $BASE
-```
+`status` is read-only; an unbound worktree reports an actionable error. `ensure` reuses the current task, and `--agent` only supplies metadata on initial creation. Without a task pointer, it reuses the unique task matching project/directory/branch; several candidates require `--task <id>`, never a guess. Only when no task exists for that directory does it create one, with empty session metadata and the initial HEAD as base. A branch that differs from the recorded task, a stale pointer or a pointer to another project is reported as drift and refused; nothing is repaired automatically. To clear a stale pointer, run `project use <name> --replace` and ensure again.
 
-Use an existing branch with a worktree:
+### 2. Initialize only when no existing work applies
 
-```
-git worktree add ../<worktree-dir> <existing-branch>
-cd ../<worktree-dir>
-```
+Confirm the project and worktree. Create a project only for a genuinely new effort, then bind the worktree and ensure its task:
 
-Use an existing branch without a worktree:
-
-```
-git checkout <existing-branch>
+```bash
+easy project create <name> --description "<goal>"
+easy project use <name> --dir <worktree>
+easy work ensure --project <name> --dir <worktree> --agent <type>
 ```
 
-Name the worktree directory after the branch, e.g. `../wt-<branch>`. After this step, your current directory and branch are the ones recorded in the task.
+`project use` does not create a task; repeating it for the same project is idempotent and keeps the current task. `ensure --project <name>` can bind an unbound worktree. A worktree already bound to a different project requires the user's decision before `project use <name> --dir <worktree> --replace`: the context is re-pointed and the task pointer cleared, while the old project, tasks and checkpoints stay untouched. The next `ensure` creates that project's own task for this worktree.
 
-### 3. Create a task for your session
+Several repositories in one requirement are several tasks, one per worktree. To select a known compatible task, name it explicitly:
 
-At the start of your agent session, create a task that records who you are and where you are working.
+```bash
+easy work ensure --project <name> --dir <worktree> --task <id>
+```
 
-    easy task create \
-      --agent <your-agent-type> \
-      --session <your-session-id> \
-      --branch <current-branch> \
-      --dir <working-directory> \
-      [--commit-range <from>..<to>] \
-      [--project <project-name>]
+There is no `--new-task` flag. A new task is created only when the worktree genuinely has no record, or when the user explicitly asks for a separate record (then create it with `easy task create` and select it with `--task`). Separate worktrees for parallel work require an explicit user choice; each agent then binds and resumes its own approved worktree.
 
-Field guidance:
+### 3. Work and checkpoint
 
-- `--agent`: the agent type, e.g. `claude`, `codex`, `cursor`. Free text.
-- `--session`: a stable identifier for this agent session. Use whatever session ID your agent tool provides; if none is available, generate one and keep it for the lifetime of this session.
-- `--branch`: the git branch you are working on.
-- `--dir`: the working directory (usually the repository or worktree root).
-- `--commit-range`: optional. The range of commits this session has produced, e.g. `abc123..def456`. Omit it if you have not committed yet.
-- `--project`: optional if `easy project use` was already run in this repo; otherwise specify the project name.
+Develop within the user's scope; do not commit merely for tracking. At useful milestones and before handoff, collect progress and inspect history:
 
-The command prints the new task ID. **Keep it** — you will need it to update the task later.
+```bash
+easy work checkpoint --dir <worktree> --json
+easy work history --dir <worktree> --json
+```
 
-### 4. Do the work
+`checkpoint` requires an existing current task; it never calls ensure/create. The initial base stays fixed across sessions, head advances to current HEAD, and immutable history records dirty state (staged, unstaged and non-ignored untracked files). Nothing is committed or changed in Git. `history` returns the whole checkpoint history of the current task, including entries recorded from earlier sessions and agents. To read a task's history without the worktree being online, use `easy work history --task <id> --json` with the ID from `project show`.
 
-Develop normally. Commit on your branch. If you are working in a separate git worktree, that is fine — each worktree is its own directory and branch, so create one task per worktree/session.
+The old head must remain an ancestor of current HEAD. Branch/common-dir/association drift, invalid ranges or reset/rebase divergence cause refusal, not silent repair. Run `status`, explain the mismatch and ask the user; restore the correct branch or binding, or explicitly select a different task, only after review. Legacy empty ranges start at current HEAD and cannot recover previously unrecorded history. A commit range describes the task's development record, not an agent's exclusive contribution.
 
-### 5. Update the commit range as you go
+`easy task create` / `update` remain available for explicit record management; `--session` is optional compatibility metadata and never drives recovery. Explicit task creation does not bind the worktree; select it with `work ensure --task`. Do not use manual range updates to bypass checkpoint validation.
 
-Whenever you make new commits, update the task's commit range so the project record reflects your progress.
+### 4. Handoff without closing
 
-    easy task update <task-id> --commit-range <from>..<to>
+Checkpoint and report project/task, directory/branch, commit range, dirty state, validation and remaining work. Keep the project active while requirements may continue across sessions.
 
-You can also update other fields if they change (branch, session, directory, agent).
+Only when the user explicitly requests the lifecycle change:
 
-### 6. Check what others are doing
+```bash
+easy project close <name> --confirm
+easy project reopen <name> --confirm
+```
 
-To see all tasks under the project (including those from other agents in other worktrees):
-
-    easy project show <project-name>
-
-Or list tasks filtered by project:
-
-    easy task list --project <project-name>
-
-This helps you avoid conflicts and understand what parallel work is in flight.
-
-### 7. Finish up
-
-When your session's work is complete:
-
-1. Update the commit range one final time:
-
-       easy task update <task-id> --commit-range <from>..<to>
-
-2. If the whole project is done, close it:
-
-       easy project close <project-name>
-
-Closing a project sets its status to `ended` and records the end time. Tasks are not deleted.
-
-## Parallel work with git worktrees
-
-When multiple agents work on the same project simultaneously:
-
-1. One agent creates the project: `easy project create <name>`.
-2. Each agent creates its own worktree and its own task:
-
-       git worktree add ../worktree-1 -b feature/foo
-       cd ../worktree-1
-       easy project use <name>
-       easy task create --agent claude --session s1 --branch feature/foo --dir "$PWD"
-
-3. Agents update their own tasks as they commit.
-4. Any agent can run `easy project show <name>` to see all tasks and their commit ranges.
-
-Because each task records its own branch and directory, there is no ambiguity about who worked where.
-
-## Tips
-
-- Run `easy task create` early in the session, before you forget the session ID.
-- If you do not know the session ID, use a memorable string you can recognize later.
-- Keep commit ranges in `from..to` form so they are directly usable with `git log`.
-- Use `--json` on any list/show command when you need machine-readable output.
+Closing sets the project to `ended`; tasks and checkpoint history are retained. The flag does not establish that the user approved the action. A resumed session must not close a project merely because its own turn ended.

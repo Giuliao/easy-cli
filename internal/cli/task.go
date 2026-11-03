@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -42,7 +43,6 @@ func (a *app) buildTaskCreateCmd() *cobra.Command {
 	cmd.Flags().StringVar(&commitRange, "commit-range", "", "git commit range (e.g. abc..def)")
 	cmd.Flags().StringVar(&projectName, "project", "", "project name to attach to")
 	_ = cmd.MarkFlagRequired("agent")
-	_ = cmd.MarkFlagRequired("session")
 	_ = cmd.MarkFlagRequired("branch")
 	_ = cmd.MarkFlagRequired("dir")
 	return cmd
@@ -153,27 +153,46 @@ func (a *app) buildTaskDetachCmd() *cobra.Command {
 }
 
 func (a *app) runTaskCreate(agentType, sessionID, branch, directory, commitRange, projectName string) error {
+	// Resolve context from the task's directory, not the command's unrelated cwd.
+	directory = a.workDirectory(directory)
 	if projectName == "" {
-		projectName = project.CurrentProject(a.options.WorkingDir)
+		state, err := project.CurrentWork(a.db, directory)
+		if err == nil {
+			projectName = state.Project.Name
+		} else if errors.Is(err, project.ErrWorkNotBound) {
+			projectName = project.CurrentProject(directory)
+		} else {
+			// Manual legacy task records may describe a directory without Git.
+			// Database bindings take precedence whenever Git is available.
+			if _, gitErr := project.ReadGitState(directory); gitErr == nil {
+				return a.fail(1, fmt.Errorf("task create: resolve work context: %w", err))
+			}
+			projectName = project.CurrentProject(directory)
+		}
 	}
-	t, err := project.CreateTask(a.db, project.CreateTaskParams{
-		AgentType:   agentType,
-		SessionID:   sessionID,
-		Branch:      branch,
-		Directory:   directory,
-		CommitRange: commitRange,
-	})
+	var p project.Project
+	if projectName != "" {
+		var err error
+		p, err = project.GetProjectByName(a.db, projectName)
+		if err != nil {
+			return a.fail(1, fmt.Errorf("task create: %w", err))
+		}
+		if p.Status != project.StatusActive {
+			return a.fail(1, project.ErrProjectEnded)
+		}
+	}
+	params := project.CreateTaskParams{AgentType: agentType, SessionID: sessionID, Branch: branch, Directory: directory, CommitRange: commitRange}
+	var t project.Task
+	var err error
+	if projectName == "" {
+		t, err = project.CreateTask(a.db, params)
+	} else {
+		t, err = project.CreateTaskInProject(a.db, params, p.ID)
+	}
 	if err != nil {
 		return a.fail(1, fmt.Errorf("task create: %w", err))
 	}
 	if projectName != "" {
-		p, err := project.GetProjectByName(a.db, projectName)
-		if err != nil {
-			return a.fail(1, fmt.Errorf("task create: %w", err))
-		}
-		if err := project.AttachTaskToProject(a.db, t.ID, p.ID); err != nil {
-			return a.fail(1, fmt.Errorf("task create: attach to project: %w", err))
-		}
 		fmt.Fprintf(a.options.Out, "Created task %s and attached to project %q\n", t.ID, projectName)
 		return nil
 	}

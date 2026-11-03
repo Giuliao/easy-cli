@@ -23,6 +23,7 @@ func (a *app) buildProjectCmd() *cobra.Command {
 	cmd.AddCommand(a.buildProjectListCmd())
 	cmd.AddCommand(a.buildProjectShowCmd())
 	cmd.AddCommand(a.buildProjectCloseCmd())
+	cmd.AddCommand(a.buildProjectReopenCmd())
 	cmd.AddCommand(a.buildProjectDeleteCmd())
 	cmd.AddCommand(a.buildProjectUseCmd())
 	return cmd
@@ -71,14 +72,40 @@ func (a *app) buildProjectShowCmd() *cobra.Command {
 }
 
 func (a *app) buildProjectCloseCmd() *cobra.Command {
-	return &cobra.Command{
+	var confirm bool
+	cmd := &cobra.Command{
 		Use:   "close <name>",
-		Short: "Close a project (set status to ended).",
+		Short: "Close a project only when the user explicitly requests it (--confirm).",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if !confirm {
+				return a.fail(2, fmt.Errorf("project close requires --confirm and an explicit user request; completing a turn or session does not end the project"))
+			}
 			return a.runProjectClose(args[0])
 		},
 	}
+	cmd.Flags().BoolVar(&confirm, "confirm", false, "confirm the user explicitly requested project closure")
+	return cmd
+}
+
+func (a *app) buildProjectReopenCmd() *cobra.Command {
+	var confirm bool
+	cmd := &cobra.Command{
+		Use: "reopen <name>", Short: "Reopen an ended project after explicit user confirmation.", Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if !confirm {
+				return a.fail(2, fmt.Errorf("project reopen requires --confirm and an explicit user request"))
+			}
+			p, err := project.ReopenProject(a.db, args[0])
+			if err != nil {
+				return a.fail(1, fmt.Errorf("project reopen: %w", err))
+			}
+			fmt.Fprintf(a.options.Out, "Reopened project %q\n", p.Name)
+			return nil
+		},
+	}
+	cmd.Flags().BoolVar(&confirm, "confirm", false, "confirm the user explicitly requested reopening")
+	return cmd
 }
 
 func (a *app) buildProjectDeleteCmd() *cobra.Command {
@@ -93,14 +120,27 @@ func (a *app) buildProjectDeleteCmd() *cobra.Command {
 }
 
 func (a *app) buildProjectUseCmd() *cobra.Command {
-	return &cobra.Command{
+	var directory string
+	var replace bool
+	cmd := &cobra.Command{
 		Use:   "use <name>",
-		Short: "Set the current project for this repository.",
+		Short: "Bind this worktree to a project; never switch branches.",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return a.runProjectUse(args[0])
+			s, err := project.BindProject(a.db, a.workDirectory(directory), args[0], replace)
+			if err != nil {
+				return a.fail(1, fmt.Errorf("project use: %w", err))
+			}
+			fmt.Fprintf(a.options.Out, "Current project set to %q\nDirectory: %s\nBranch: %s\n", args[0], s.Git.Directory, s.Git.Branch)
+			if s.Task != nil {
+				fmt.Fprintf(a.options.Out, "Current task: %s\n", s.Task.ID)
+			}
+			return nil
 		},
 	}
+	cmd.Flags().StringVar(&directory, "dir", "", "worktree directory (defaults to current directory)")
+	cmd.Flags().BoolVar(&replace, "replace", false, "explicitly replace a binding after user confirmation; clears current task")
+	return cmd
 }
 
 func (a *app) runProjectCreate(name, description string) error {
@@ -204,17 +244,6 @@ func (a *app) runProjectDelete(name string) error {
 		return a.fail(1, fmt.Errorf("project delete: %w", err))
 	}
 	fmt.Fprintf(a.options.Out, "Deleted project %q\n", name)
-	return nil
-}
-
-func (a *app) runProjectUse(name string) error {
-	if _, err := project.GetProjectByName(a.db, name); err != nil {
-		return a.fail(1, fmt.Errorf("project use: %w", err))
-	}
-	if err := project.SetCurrentProject(a.options.WorkingDir, name); err != nil {
-		return a.fail(1, fmt.Errorf("project use: %w", err))
-	}
-	fmt.Fprintf(a.options.Out, "Current project set to %q\n", name)
 	return nil
 }
 

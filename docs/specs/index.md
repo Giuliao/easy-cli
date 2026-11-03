@@ -21,7 +21,8 @@
 
 ### `easy-cli / project`
 
-- [Project 与 Task 管理 CLI 设计](./2026-08-28-project-management-design.md)
+- [Project 与 Task 管理 CLI 设计（会话模型已被取代）](./2026-08-28-project-management-design.md)
+- [基于 Project / Task 的跨会话工作续接设计](<./2026-11-03-worktree-project-resume-design.md>)
 
 ## Module -> Specs
 
@@ -43,6 +44,7 @@
 - [MySQL 数据查询 CLI 设计](./2026-08-11-mysql-query-design.md)
 - [easy CLI 配置与 Home 初始化设计](./2026-08-11-config-layer-design.md)
 - [Project 与 Task 管理 CLI 设计](./2026-08-28-project-management-design.md)
+- [基于 Project / Task 的跨会话工作续接设计](<./2026-11-03-worktree-project-resume-design.md>)
 
 ### `internal/config`
 
@@ -54,10 +56,12 @@
 - [easy CLI 配置与 Home 初始化设计](./2026-08-11-config-layer-design.md)
 - [外置 Skill 注册与 easy-cli 聚合索引设计](./2026-08-14-external-skill-catalog-design.md)
 - [Project 与 Task 管理 CLI 设计](./2026-08-28-project-management-design.md)
+- [基于 Project / Task 的跨会话工作续接设计](<./2026-11-03-worktree-project-resume-design.md>)
 
 ### `internal/project`
 
 - [Project 与 Task 管理 CLI 设计](./2026-08-28-project-management-design.md)
+- [基于 Project / Task 的跨会话工作续接设计](<./2026-11-03-worktree-project-resume-design.md>)
 
 ### `internal/prompt`
 
@@ -80,6 +84,11 @@
 - [外置 Skill 注册与 easy-cli 聚合索引设计](./2026-08-14-external-skill-catalog-design.md)
 - [MySQL 数据查询 CLI 设计](./2026-08-11-mysql-query-design.md)
 - [easy CLI 配置与 Home 初始化设计](./2026-08-11-config-layer-design.md)
+- [基于 Project / Task 的跨会话工作续接设计](<./2026-11-03-worktree-project-resume-design.md>)
+
+### `skills/project-workflow`
+
+- [基于 Project / Task 的跨会话工作续接设计](<./2026-11-03-worktree-project-resume-design.md>)
 
 ### `skills/mysql-ddl-export`
 
@@ -102,6 +111,7 @@
 
 - [easy CLI 配置与 Home 初始化设计](./2026-08-11-config-layer-design.md)
 - [外置 Skill 注册与 easy-cli 聚合索引设计](./2026-08-14-external-skill-catalog-design.md)
+- [基于 Project / Task 的跨会话工作续接设计](<./2026-11-03-worktree-project-resume-design.md>)
 
 ### `.gitignore`
 
@@ -170,3 +180,12 @@
 - `internal/config`
 - `internal/projectroot`
 - `internal/project`
+
+### [基于 Project / Task 的跨会话工作续接设计](<./2026-11-03-worktree-project-resume-design.md>)
+
+- `internal/project`
+- `internal/cli`
+- `internal/projectroot`
+- `skills/project-workflow`
+- `skills/easy-cli`
+- `README.md`

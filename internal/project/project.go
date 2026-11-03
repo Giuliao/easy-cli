@@ -113,6 +113,22 @@ func CloseProject(db *sql.DB, name string) (Project, error) {
 	return GetProjectByName(db, name)
 }
 
+// ReopenProject is an explicit lifecycle action, never called by work recovery.
+func ReopenProject(db *sql.DB, name string) (Project, error) {
+	result, err := db.Exec(`UPDATE projects SET status = ?, ended_at = NULL WHERE name = ?`, StatusActive, name)
+	if err != nil {
+		return Project{}, fmt.Errorf("reopen project: %w", err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return Project{}, err
+	}
+	if affected == 0 {
+		return Project{}, fmt.Errorf("%w: %q", ErrProjectNotFound, name)
+	}
+	return GetProjectByName(db, name)
+}
+
 func DeleteProject(db *sql.DB, name string) error {
 	result, err := db.Exec(`DELETE FROM projects WHERE name = ?`, name)
 	if err != nil {
